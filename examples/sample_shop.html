@@ -1,0 +1,1270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>codeflow · sample_shop</title>
+<style>
+:root{
+  --bg:#f6f6f3;--panel:#ffffff;--ink:#1d1d1b;--muted:#6c6c66;--line:#e3e2dc;
+  --accent:#2f6fdb;--accent-soft:#e4edfc;--node:#ffffff;--node-line:#c8c7c0;--edge:#a6a59e;
+  --hl:#e8590c;--hl-soft:#fff1e7;--param:#e4edfc;--ret:#e3f5e8;--ret-line:#2f9e44;
+  --callin:#fff5d9;--callin-line:#d19c00;--ext:#f0f0ed;--code-bg:#fafaf8;
+  --kw:#8a3ffc;--str:#1a7f37;--com:#8b8b85;--num:#b35900;
+  --font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"Cascadia Code",Consolas,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#161615;--panel:#1f1f1d;--ink:#ebebe6;--muted:#9c9c95;--line:#34342f;
+  --accent:#6ea0ff;--accent-soft:#1d2b47;--node:#262624;--node-line:#4b4b45;--edge:#6e6e67;
+  --hl:#ff8c42;--hl-soft:#3b2515;--param:#1d2b47;--ret:#15301d;--ret-line:#51cf66;
+  --callin:#3a3013;--callin-line:#e0b400;--ext:#2a2a28;--code-bg:#1a1a18;
+  --kw:#c29bff;--str:#7ee2a8;--com:#78786f;--num:#ffb870;color-scheme:dark;
+}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;font:13px/1.45 var(--font);color:var(--ink);background:var(--bg);display:grid;
+  grid-template-columns:260px minmax(0,1fr) 410px;grid-template-rows:52px minmax(0,1fr);
+  grid-template-areas:"top top top" "side stage panel";height:100vh;overflow:hidden}
+header{grid-area:top;display:flex;align-items:center;gap:16px;padding:0 16px;border-bottom:1px solid var(--line);background:var(--panel);min-width:0}
+.brand{font-weight:650;font-size:15px;white-space:nowrap}
+.logo{color:var(--accent);margin-right:2px}
+.muted{color:var(--muted);font-weight:400}
+.mono{font-family:var(--mono)}
+#tabs{display:flex;gap:2px;background:var(--bg);padding:3px;border-radius:8px;border:1px solid var(--line)}
+#tabs button{border:0;background:none;color:var(--muted);padding:5px 12px;border-radius:6px;font:inherit;cursor:pointer;white-space:nowrap}
+#tabs button.on{background:var(--panel);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+kbd{font:10px var(--mono);color:var(--muted);margin-left:4px}
+.search{position:relative;flex:1;max-width:420px;min-width:160px}
+#q{width:100%;font:13px var(--font);padding:7px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);outline:none}
+#q:focus{border-color:var(--accent)}
+#results{position:absolute;top:38px;left:0;right:0;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.15);max-height:60vh;overflow:auto;z-index:30}
+.res{padding:6px 10px;cursor:pointer;display:flex;justify-content:space-between;gap:10px}
+.res.on,.res:hover{background:var(--accent-soft)}
+#stats{margin-left:auto;white-space:nowrap;font-size:12px;overflow:hidden;text-overflow:ellipsis}
+#side{grid-area:side;border-right:1px solid var(--line);background:var(--panel);overflow:auto;padding:12px}
+#panel{grid-area:panel;border-left:1px solid var(--line);background:var(--panel);overflow:auto;padding:16px 18px 40px}
+#stage{grid-area:stage;position:relative;overflow:hidden;min-width:0}
+#canvas{width:100%;height:100%;display:block;cursor:grab;user-select:none;touch-action:none}
+#canvas.dragging{cursor:grabbing}
+#toolbar{position:absolute;top:10px;left:10px;right:10px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;z-index:5;pointer-events:none}
+#toolbar>*{pointer-events:auto}
+.grp{display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px 8px;box-shadow:0 1px 3px rgba(0,0,0,.06);font-size:12px}
+.grp .lbl{color:var(--muted)}
+.note{color:var(--muted)}
+.warn{color:var(--hl)}
+#pathIn{font:12px var(--font);border:1px solid var(--line);border-radius:6px;padding:3px 8px;background:var(--bg);color:var(--ink);width:200px}
+button.b{font:12px var(--font);padding:4px 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+button.b:hover,a.b:hover{border-color:var(--accent)}
+button.b.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+button.b.sm{padding:0 7px;line-height:18px}
+a.b{font:12px var(--font);padding:4px 10px;border-radius:6px;border:1px solid var(--line);color:var(--ink);text-decoration:none}
+#zoomctl{position:absolute;right:10px;bottom:10px;display:flex;gap:4px}
+#legend{position:absolute;left:10px;bottom:10px;display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;max-width:calc(100% - 150px)}
+.sw{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-2px;border:1.5px solid}
+#empty{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);pointer-events:none;padding:24px;text-align:center}
+/* graph */
+.node rect.bg{fill:var(--node);stroke:var(--node-line);stroke-width:1}
+.node text{font:12px var(--mono);fill:var(--ink)}
+.node text.sub{font:10px var(--font);fill:var(--muted)}
+.node{cursor:pointer}
+.node:hover rect.bg{stroke:var(--accent)}
+.node.focus rect.bg{stroke:var(--accent);stroke-width:2;fill:var(--accent-soft)}
+.node.klass rect.bg{stroke-dasharray:4 2}
+.node.ext rect.bg{fill:var(--ext);stroke-dasharray:3 3}
+.node.ext text{fill:var(--muted)}
+.node.param rect.bg{fill:var(--param);stroke:var(--accent)}
+.node.ret rect.bg{fill:var(--ret);stroke:var(--ret-line)}
+.node.callin rect.bg{fill:var(--callin);stroke:var(--callin-line)}
+.node.callext rect.bg{fill:var(--ext)}
+.node.attr rect.bg{stroke:var(--kw);stroke-dasharray:4 2}
+.node.mark rect.bg{stroke:var(--hl);stroke-width:2;fill:var(--hl-soft)}
+.node.sel rect.bg{stroke:var(--hl);stroke-width:2.5}
+.edge{fill:none;stroke:var(--edge);stroke-width:1.3;marker-end:url(#arr)}
+.edge.param{stroke-dasharray:6 3}
+.edge.return{stroke-dasharray:2 3}
+.edge.ext{stroke-dasharray:3 3;opacity:.7}
+.edge.mark{stroke:var(--hl);stroke-width:2.4;marker-end:url(#arr-hl)}
+.edge.hot{stroke:var(--accent);stroke-width:2.2;marker-end:url(#arr-hot)}
+.arrow{fill:var(--edge)}.arrow.hl{fill:var(--hl)}.arrow.hot{fill:var(--accent)}
+.elabel{font:10px var(--mono);fill:var(--muted);paint-order:stroke;stroke:var(--bg);stroke-width:3px;pointer-events:none}
+#canvas.hovering .node:not(.hot){opacity:.28}
+#canvas.hovering .edge:not(.hot),#canvas.hovering .elabel:not(.hot){opacity:.12}
+/* side */
+#side h3{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:16px 0 6px}
+#side h3:first-of-type{margin-top:12px}
+#filter{width:100%;font:12px var(--font);padding:6px 9px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.item{display:flex;justify-content:space-between;gap:8px;padding:3px 6px;border-radius:5px;cursor:pointer;color:var(--ink);text-decoration:none}
+.item:hover{background:var(--bg)}
+.item.on{background:var(--accent-soft)}
+.item .nm{font:12px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.item .muted{font-size:11px;flex:none;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+details summary{cursor:pointer;padding:3px 2px;font:12px var(--mono)}
+details .item{margin-left:12px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.subh{font-size:11px;color:var(--muted);margin:8px 0 2px}
+/* panel */
+.kicker{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);word-break:break-all}
+#panel h2{font-size:17px;margin:2px 0 8px;word-break:break-word}
+#panel h4{font-size:11px;text-transform:uppercase;color:var(--muted);margin:18px 0 6px;letter-spacing:.05em}
+.badge{display:inline-block;font-size:11px;padding:1px 8px;border-radius:10px;background:var(--bg);border:1px solid var(--line);margin:0 4px 4px 0}
+.badge.entry{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.badge.warn{border-color:var(--hl);color:var(--hl)}
+pre.sig{font:12px var(--mono);background:var(--code-bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;white-space:pre-wrap;word-break:break-word;margin:8px 0}
+.doc{margin:6px 0;color:var(--ink)}
+.actions{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.lst{list-style:none;margin:0;padding:0}
+.lst li{display:flex;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:1px dashed var(--line)}
+.lst li .muted{font-size:11px;text-align:right}
+a.lnk,.lst a{color:var(--accent);cursor:pointer;font:12px var(--mono);text-decoration:none;word-break:break-all}
+a.lnk:hover,.lst a:hover{text-decoration:underline}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.chip{font:11px var(--mono);padding:2px 6px;border-radius:5px;border:1px solid var(--line);background:var(--bg)}
+.chip[data-sel]{cursor:pointer}.chip[data-sel]:hover{border-color:var(--hl)}
+.chip.param{border-color:var(--accent)}.chip.ret{border-color:var(--ret-line)}.chip.callin{border-color:var(--callin-line)}.chip.attr{border-color:var(--kw)}
+pre.code{font:12px/1.55 var(--mono);background:var(--code-bg);border:1px solid var(--line);border-radius:6px;padding:6px 0;overflow:auto;max-height:440px;margin:0}
+.ln{display:flex;white-space:pre;padding-right:12px}
+.ln.hl{background:var(--hl-soft)}
+.ln .no{width:44px;flex:none;text-align:right;padding-right:12px;color:var(--muted);user-select:none}
+.k{color:var(--kw)}.s{color:var(--str)}.c{color:var(--com);font-style:italic}.n{color:var(--num)}
+mark{background:var(--accent-soft);color:inherit;border-radius:2px;box-shadow:0 0 0 1px var(--accent)}
+.journey{padding-left:20px;margin:8px 0}
+.journey li{margin-bottom:10px}
+.steps{list-style:none;padding:0;margin:6px 0;font:12px var(--mono)}
+.steps li{padding:3px 0;border-left:2px solid var(--line);padding-left:10px}
+.steps .muted{font-family:var(--font);font-size:11px}
+.empty-note{color:var(--muted);font-style:italic}
+button.b.folder{max-width:260px;font-weight:600;gap:6px}
+button.b.folder span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lib{cursor:pointer}.lib.fw{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:50;padding:16px}
+.dlg{background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 20px 60px rgba(0,0,0,.35);width:min(760px,100%);max-height:min(720px,calc(100vh - 32px));display:flex;flex-direction:column;overflow:hidden}
+.dlg-h{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--line)}
+.dlg-h h3{margin:0;font-size:15px}
+#pkBody{display:flex;flex-direction:column;min-height:0;flex:1}
+.pk-bar{display:flex;gap:6px;padding:12px 16px 6px}
+#pkPath{flex:1;min-width:0;font:13px var(--mono);padding:6px 9px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.pk-quick{display:flex;flex-wrap:wrap;gap:4px;padding:4px 16px 8px}
+.pk-quick .chip{cursor:pointer}.pk-quick .chip:hover{border-color:var(--accent)}
+.pk-quick .lbl{font-size:11px;color:var(--muted);align-self:center;margin:0 2px 0 6px}
+.pk-here{margin:0 16px 8px;padding:10px 12px;border-radius:8px;background:var(--bg);border:1px solid var(--line);font-size:12px}
+.pk-here b{font-size:13px}
+.pk-list{overflow:auto;flex:1;min-height:120px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.pk-row{display:flex;align-items:center;gap:8px;padding:6px 16px;cursor:pointer;border-bottom:1px solid var(--line)}
+.pk-row:hover{background:var(--accent-soft)}
+.pk-row .nm{font:12px var(--mono);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk-row.dim{opacity:.55}
+.pk-row .badge{margin:0}
+.pk-row .go{visibility:hidden}.pk-row:hover .go{visibility:visible}
+.dlg-f{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 16px;font-size:12px}
+.dlg-f .sp{flex:1}
+.pk-ex input{font:12px var(--font);padding:4px 8px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink);width:200px;margin-left:4px}
+.lc{padding:4px 16px 16px;overflow:auto}
+.lc section{padding:10px 0 12px;border-bottom:1px solid var(--line);margin-bottom:10px}
+.lc h4{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+.lc p{margin:6px 0 0;font-size:12px}
+#lcPath{flex:1;min-width:0;font:13px var(--mono);padding:6px 9px;border-radius:7px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.lc-status{margin-top:12px;font-size:12px;line-height:1.6;min-height:1em}
+.lc-status.warn{color:var(--hl)}
+.static-note{padding:16px;line-height:1.6}
+.static-note code{font:12px var(--mono);background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:2px 6px}
+@media (max-width:1000px){
+  body{grid-template-columns:1fr;grid-template-rows:auto 62vh auto auto;grid-template-areas:"top" "stage" "panel" "side";height:auto;overflow:auto}
+  header{flex-wrap:wrap;padding:8px 16px;gap:8px}
+  #stats{margin-left:0;width:100%}
+  #panel,#side{border:0;border-top:1px solid var(--line)}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><span class="logo">&#9671;</span>codeflow</div>
+  <button class="b folder" id="openBtn" title="Open another folder (O)"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4.2l2 2.2h8.8A1.5 1.5 0 0 1 21 8.7v9.8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span id="proj">Open folder</span></button>
+  <nav id="tabs">
+    <button data-view="calls">Calls<kbd>1</kbd></button>
+    <button data-view="flow">Data flow<kbd>2</kbd></button>
+    <button data-view="trace">Trace<kbd>3</kbd></button>
+    <button data-view="modules">Modules<kbd>4</kbd></button>
+  </nav>
+  <div class="search"><input id="q" placeholder="Search functions…   ( / )" autocomplete="off" spellcheck="false"><div id="results" hidden></div></div>
+  <div id="stats" class="muted"></div>
+</header>
+<aside id="side">
+  <input id="filter" placeholder="Filter modules & functions…" spellcheck="false">
+  <h3>Detected</h3><div id="detected"></div>
+  <h3>Entry points</h3><div id="entries"></div>
+  <h3>Insights</h3><div id="insights"></div>
+  <h3>Modules</h3><div id="tree"></div>
+</aside>
+<main id="stage">
+  <div id="toolbar"></div>
+  <svg id="canvas" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" class="arrow"/></marker>
+      <marker id="arr-hl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" class="arrow hl"/></marker>
+      <marker id="arr-hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" class="arrow hot"/></marker>
+    </defs>
+    <g id="viewport"><g id="edges"></g><g id="elabels"></g><g id="nodes"></g></g>
+  </svg>
+  <div id="empty" hidden></div>
+  <div id="legend"></div>
+  <div id="zoomctl"><button class="b" data-z="rot" title="Rotate layout (R)">&#8635; Rotate</button><button class="b" data-z="in" title="Zoom in">+</button><button class="b" data-z="out" title="Zoom out">&minus;</button><button class="b" data-z="fit" title="Fit (F)">Fit</button></div>
+</main>
+<aside id="panel"></aside>
+<datalist id="fnlist"></datalist>
+<div id="picker" class="modal" hidden>
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="pkTitle">
+    <div class="dlg-h"><h3 id="pkTitle">Open a project folder</h3><button class="b sm" id="pkClose" title="Close (Esc)">&#10005;</button></div>
+    <div id="pkBody">
+      <div class="pk-bar">
+        <button class="b" id="pkUp" title="Parent folder">&#8593;</button>
+        <input id="pkPath" spellcheck="false" placeholder="Type or paste a folder path, e.g. D:\Project\RangeBreak">
+        <button class="b" id="pkGo">Go</button>
+        <button class="b" id="pkNative" title="Use the Windows / macOS folder dialog">Browse&hellip;</button>
+      </div>
+      <div class="pk-quick" id="pkQuick"></div>
+      <div class="pk-here" id="pkHere"></div>
+      <div class="pk-list" id="pkList"></div>
+      <div class="dlg-f">
+        <label class="pk-ex">Skip folders <input id="pkEx" placeholder="e.g. tests, migrations" spellcheck="false"></label>
+        <label><input type="checkbox" id="pkHidden"> Show hidden</label>
+        <span class="sp"></span>
+        <button class="b pri" id="pkOpen">Analyze this folder</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script id="cf-analyzer" type="application/json">"\"\"\"\ncodeflow.analyzer - static analysis of a Python codebase into:\n\n  * a call graph        (which function calls which, resolved across modules)\n  * local data flow     (inside each function: params -> variables -> calls -> return)\n  * global data flow    (the same, stitched across calls: argument -> callee param,\n                         callee return -> caller, and self.<attr> shared across methods)\n\nNothing is executed; everything comes from the `ast` module.\n\"\"\"\nfrom __future__ import annotations\n\nimport ast\nimport builtins\nimport sys\nimport time\nfrom collections import defaultdict, deque\nfrom dataclasses import dataclass, field\nfrom pathlib import Path\nfrom types import SimpleNamespace\n\n__all__ = [\"Project\", \"Func\", \"Call\"]\nVERSION = \"0.2.0\"\n\nSKIP_DIRS = {\".git\", \".hg\", \".svn\", \"venv\", \".venv\", \"env\", \".env\", \"__pycache__\", \"node_modules\",\n             \"build\", \"dist\", \".tox\", \".nox\", \".mypy_cache\", \".pytest_cache\", \".ruff_cache\",\n             \"site-packages\", \".idea\", \".vscode\", \".eggs\"}\nSCOPE_TYPES = (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Lambda)\nFUNC_TYPES = (ast.FunctionDef, ast.AsyncFunctionDef)\nMUTATORS = {\"append\", \"extend\", \"insert\", \"update\", \"add\", \"setdefault\", \"put\", \"push\", \"appendleft\"}\nBUILTINS = set(dir(builtins))\nROUTE_METHODS = {\"get\", \"post\", \"put\", \"delete\", \"patch\", \"head\", \"options\", \"route\", \"api_route\", \"websocket\"}\nTASK_DECOS = {\"task\", \"shared_task\", \"periodic_task\", \"job\", \"actor\"}\nCLI_DECOS = {\"command\", \"group\", \"callback\"}\nBRANCHES = tuple(t for t in (ast.If, ast.For, ast.AsyncFor, ast.While, ast.IfExp, ast.ExceptHandler,\n                             ast.comprehension, getattr(ast, \"match_case\", None)) if t)\nMAX_FILE_CHARS = 400_000\n\n\n# ============================================================================ model\n@dataclass\nclass Call:\n    text: str                       # callee as written, e.g. \"self.repo.save\"\n    line: int\n    args: list                      # [{\"star\": bool, \"src\": [local node ids]}]\n    kwargs: dict                    # name -> [local node ids]\n    resolved: str | None = None     # project qualname (function or class) or None if external\n    bindings: list = field(default_factory=list)   # [([src ids], callee_param)]\n\n    @property\n    def node(self):\n        return f\"call:{self.text}@{self.line}\"\n\n\n@dataclass\nclass Func:\n    qual: str\n    name: str\n    module: str\n    file: str\n    line: int\n    end: int\n    cls: str | None\n    kind: str                       # \"function\" | \"method\" | \"module\"\n    pos_params: list\n    kw_params: list\n    vararg: str | None\n    kwarg: str | None\n    decorators: list\n    doc: str\n    is_async: bool\n    entry: dict | None\n    complexity: int\n    calls: list = field(default_factory=list)\n    flows: list = field(default_factory=list)   # [(src, dst, label)] local node ids\n    types: dict = field(default_factory=dict)   # var -> call text that produced it\n\n    @property\n    def params(self):\n        return (self.pos_params + ([f\"*{self.vararg}\"] if self.vararg else []) + self.kw_params\n                + ([f\"**{self.kwarg}\"] if self.kwarg else []))\n\n    @property\n    def param_names(self):\n        return self.pos_params + [x for x in (self.vararg,) if x] + self.kw_params + [x for x in (self.kwarg,) if x]\n\n\n@dataclass\nclass Module:\n    name: str\n    file: str\n    is_pkg: bool\n    text: str\n    aliases: dict = field(default_factory=dict)\n    top_names: set = field(default_factory=set)\n\n\n# ============================================================================ AST helpers\ndef dotted(node):\n    \"\"\"a.b.c -> 'a.b.c'; f().g -> 'f().g'; anything else -> None.\"\"\"\n    parts = []\n    while isinstance(node, ast.Attribute):\n        parts.append(node.attr)\n        node = node.value\n    if isinstance(node, ast.Name):\n        parts.append(node.id)\n    elif isinstance(node, ast.Call):\n        inner = dotted(node.func)\n        if inner is None:\n            return None\n        parts.append(inner + \"()\")\n    else:\n        return None\n    return \".\".join(reversed(parts))\n\n\ndef walk_local(nodes):\n    \"\"\"Walk nodes without entering nested functions/classes/lambdas.\"\"\"\n    stack = [n for n in nodes if not isinstance(n, SCOPE_TYPES)]\n    while stack:\n        n = stack.pop()\n        yield n\n        stack.extend(c for c in ast.iter_child_nodes(n) if not isinstance(c, SCOPE_TYPES))\n\n\ndef store_names(t):\n    if isinstance(t, ast.Name):\n        return [t.id]\n    if isinstance(t, ast.Attribute):\n        d = dotted(t)\n        return [d] if d and \"()\" not in d else []\n    if isinstance(t, (ast.Tuple, ast.List)):\n        return [n for e in t.elts for n in store_names(e)]\n    if isinstance(t, (ast.Starred, ast.Subscript)):\n        return store_names(t.value)\n    return []\n\n\ndef sources(expr, ignore):\n    \"\"\"Direct inputs of an expression: (variable names, outermost Call nodes).\"\"\"\n    vars_, calls, stack = set(), [], [expr]\n    while stack:\n        n = stack.pop()\n        if isinstance(n, SCOPE_TYPES):\n            continue\n        if isinstance(n, ast.Call):\n            calls.append(n)                  # its inputs are recorded as edges into the call node\n            continue\n        if isinstance(n, ast.Attribute) and isinstance(n.ctx, ast.Load):\n            d = dotted(n)\n            if d and d.startswith(\"self.\") and \"()\" not in d:\n                vars_.add(d)\n                continue\n        if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load) and n.id not in ignore:\n            vars_.add(n.id)\n        stack.extend(ast.iter_child_nodes(n))\n    return sorted(vars_), calls\n\n\ndef call_text(c):\n    d = dotted(c.func)\n    if d:\n        return d\n    if isinstance(c.func, ast.Attribute):\n        return f\"(\u2026).{c.func.attr}\"\n    return \"<dynamic>\"\n\n\ndef call_id(c):\n    return f\"call:{call_text(c)}@{c.lineno}\"\n\n\ndef first_str_arg(call):\n    for a in call.args:\n        if isinstance(a, ast.Constant) and isinstance(a.value, str):\n            return a.value\n    return None\n\n\ndef deco_text(d):\n    if isinstance(d, ast.Call):\n        t = dotted(d.func) or \"?\"\n        s = first_str_arg(d)\n        return f'{t}(\"{s}\")' if s is not None else f\"{t}(\u2026)\"\n    return dotted(d) or \"?\"\n\n\ndef detect_entry(node):\n    for d in node.decorator_list:\n        target = d.func if isinstance(d, ast.Call) else d\n        t = dotted(target) or \"\"\n        last = t.rsplit(\".\", 1)[-1]\n        if \".\" in t and last in ROUTE_METHODS:\n            path = first_str_arg(d) if isinstance(d, ast.Call) else None\n            verb = \"ROUTE\" if last in (\"route\", \"api_route\") else last.upper()\n            return {\"kind\": \"route\", \"label\": f\"{verb} {path or ''}\".strip()}\n        if last in TASK_DECOS:\n            return {\"kind\": \"task\", \"label\": t}\n        if \".\" in t and last in CLI_DECOS:\n            return {\"kind\": \"cli\", \"label\": t}\n    if node.name.startswith(\"test_\"):\n        return {\"kind\": \"test\", \"label\": node.name}\n    if node.name == \"main\":\n        return {\"kind\": \"main\", \"label\": \"main()\"}\n    return None\n\n\ndef has_main_guard(tree):\n    for n in tree.body:\n        if isinstance(n, ast.If):\n            names = {x.id for x in ast.walk(n.test) if isinstance(x, ast.Name)}\n            consts = {x.value for x in ast.walk(n.test) if isinstance(x, ast.Constant)}\n            if \"__name__\" in names and \"__main__\" in consts:\n                return True\n    return False\n\n\ndef complexity(nodes):\n    c = 1\n    for n in walk_local(nodes):\n        if isinstance(n, BRANCHES):\n            c += 1\n        elif isinstance(n, ast.BoolOp):\n            c += len(n.values) - 1\n    return c\n\n\ndef build_func(node, qual, mod, cls, is_module=False):\n    if is_module:\n        pos, kw, va, ka, decos = [], [], None, None, []\n        entry = {\"kind\": \"main\", \"label\": f\"python {mod.file}\"} if has_main_guard(node) else None\n        line, end, name, kind, is_async = 1, max(1, mod.text.count(\"\\n\") + 1), \"<module>\", \"module\", False\n    else:\n        a = node.args\n        pos = [x.arg for x in a.posonlyargs + a.args]\n        kw = [x.arg for x in a.kwonlyargs]\n        va = a.vararg.arg if a.vararg else None\n        ka = a.kwarg.arg if a.kwarg else None\n        decos = [deco_text(d) for d in node.decorator_list]\n        entry = detect_entry(node)\n        line = min([d.lineno for d in node.decorator_list] + [node.lineno])\n        end = getattr(node, \"end_lineno\", node.lineno) or node.lineno\n        name, kind = node.name, (\"method\" if cls else \"function\")\n        is_async = isinstance(node, ast.AsyncFunctionDef)\n    doc = (ast.get_docstring(node) or \"\").strip().split(\"\\n\\n\")[0][:400]\n    f = Func(qual, name, mod.name, mod.file, line, end, cls, kind, pos, kw, va, ka, decos, doc,\n             is_async, entry, complexity(node.body))\n    ignore = (set(mod.aliases) | mod.top_names | BUILTINS | {\"self\", \"cls\"}) - set(f.param_names)\n\n    def src_ids(expr):\n        vs, cs = sources(expr, ignore)\n        return [f\"var:{v}\" for v in vs] + [call_id(c) for c in cs]\n\n    def link(expr, dst, label):\n        for s in src_ids(expr):\n            f.flows.append((s, dst, label))\n\n    for n in walk_local(node.body):\n        if isinstance(n, ast.Call):\n            cid = call_id(n)\n            args, kwargs = [], {}\n            for a in n.args:\n                star = isinstance(a, ast.Starred)\n                ids = src_ids(a.value if star else a)\n                args.append({\"star\": star, \"src\": ids})\n                for s in ids:\n                    f.flows.append((s, cid, \"*arg\" if star else \"arg\"))\n            for k in n.keywords:\n                ids = src_ids(k.value)\n                kwargs[k.arg or \"**\"] = ids\n                for s in ids:\n                    f.flows.append((s, cid, k.arg or \"**kw\"))\n            if isinstance(n.func, ast.Attribute):\n                owner = dotted(n.func.value)\n                if n.func.attr in MUTATORS and owner and \"()\" not in owner and owner not in ignore:\n                    f.flows.append((cid, f\"var:{owner}\", \"mutates\"))\n                else:\n                    link(n.func.value, cid, \"on\")\n            f.calls.append(Call(call_text(n), n.lineno, args, kwargs))\n        elif isinstance(n, (ast.Assign, ast.AnnAssign, ast.AugAssign)) and n.value is not None:\n            targets = n.targets if isinstance(n, ast.Assign) else [n.target]\n            names = [nm for t in targets for nm in store_names(t)]\n            for nm in names:\n                link(n.value, f\"var:{nm}\", \"=\")\n            if isinstance(n.value, ast.Call) and dotted(n.value.func):\n                for nm in names:\n                    f.types[nm] = dotted(n.value.func)\n        elif isinstance(n, ast.Return) and n.value is not None:\n            link(n.value, \"return\", \"return\")\n        elif isinstance(n, (ast.Yield, ast.YieldFrom)) and n.value is not None:\n            link(n.value, \"return\", \"yield\")\n        elif isinstance(n, (ast.For, ast.AsyncFor)):\n            for nm in store_names(n.target):\n                link(n.iter, f\"var:{nm}\", \"each\")\n        elif isinstance(n, (ast.With, ast.AsyncWith)):\n            for item in n.items:\n                if item.optional_vars is not None:\n                    for nm in store_names(item.optional_vars):\n                        link(item.context_expr, f\"var:{nm}\", \"as\")\n        elif isinstance(n, ast.NamedExpr):\n            link(n.value, f\"var:{n.target.id}\", \":=\")\n        elif isinstance(n, ast.comprehension):\n            for nm in store_names(n.target):\n                link(n.iter, f\"var:{nm}\", \"each\")\n    f.calls.sort(key=lambda c: c.line)\n    return f\n\n\n# ============================================================================ project\nclass Project:\n    def __init__(self, root, exclude=(), include_source=True):\n        self.root = Path(root).resolve()\n        if not self.root.exists():\n            raise FileNotFoundError(f\"path not found: {root}\")\n        self.base = self.root.parent if self.root.is_file() else self.root\n        self.exclude = set(exclude)\n        self.include_source = include_source\n        self.modules: dict[str, Module] = {}\n        self.funcs: dict[str, Func] = {}\n        self.classes: dict[str, dict] = {}\n        self.attr_types: dict[str, dict] = {}\n        self.module_types: dict[str, dict] = {}     # module -> {global var: constructor text}\n        self.errors: list[str] = []\n        t0 = time.perf_counter()\n        self._load()\n        self._link()\n        self.elapsed = time.perf_counter() - t0\n\n    # -- loading ----------------------------------------------------------------\n    def _files(self):\n        if self.root.is_file():\n            yield self.root\n            return\n        skip = SKIP_DIRS | self.exclude\n        for p in sorted(self.root.rglob(\"*.py\")):\n            if not any(part in skip for part in p.relative_to(self.root).parts):\n                yield p\n\n    def _load(self):\n        for path in self._files():\n            try:\n                text = path.read_text(encoding=\"utf-8\", errors=\"replace\")\n                tree = ast.parse(text, filename=str(path))\n            except (SyntaxError, ValueError, OSError) as e:\n                self.errors.append(f\"{path.relative_to(self.base).as_posix()}: {e}\")\n                continue\n            parts = list(path.relative_to(self.base).with_suffix(\"\").parts)\n            is_pkg = parts[-1] == \"__init__\"\n            if is_pkg:\n                parts = parts[:-1]\n            name = \".\".join(parts) or self.base.name\n            mod = Module(name, path.relative_to(self.base).as_posix(), is_pkg, text)\n            self._imports(mod, tree)\n            mod.top_names = {n.name for n in tree.body if isinstance(n, (*FUNC_TYPES, ast.ClassDef))}\n            self.modules[name] = mod\n            top = build_func(tree, f\"{name}.<module>\", mod, None, is_module=True)\n            self.module_types[name] = {k: v for k, v in top.types.items() if \".\" not in k}\n            if top.calls:\n                self.funcs[top.qual] = top\n            self._collect(tree, name, mod, None)\n\n    def _imports(self, mod, tree):\n        pkg = mod.name.split(\".\") if mod.is_pkg else mod.name.split(\".\")[:-1]\n        for n in ast.walk(tree):\n            if isinstance(n, ast.Import):\n                for a in n.names:\n                    if a.asname:\n                        mod.aliases[a.asname] = a.name\n                    else:\n                        head = a.name.split(\".\")[0]\n                        mod.aliases[head] = head\n            elif isinstance(n, ast.ImportFrom):\n                if n.level:\n                    base = pkg[: max(0, len(pkg) - (n.level - 1))]\n                    src = \".\".join(base + ([n.module] if n.module else []))\n                else:\n                    src = n.module or \"\"\n                for a in n.names:\n                    if a.name != \"*\":\n                        mod.aliases[a.asname or a.name] = f\"{src}.{a.name}\" if src else a.name\n\n    def _collect(self, node, prefix, mod, cls):\n        for ch in ast.iter_child_nodes(node):\n            if isinstance(ch, FUNC_TYPES):\n                q = f\"{prefix}.{ch.name}\"\n                self.funcs[q] = build_func(ch, q, mod, cls)\n                if cls:\n                    self.classes[cls][\"methods\"].append(q)\n                self._collect(ch, q, mod, None)\n            elif isinstance(ch, ast.ClassDef):\n                q = f\"{prefix}.{ch.name}\"\n                self.classes[q] = {\"module\": mod.name, \"file\": mod.file, \"line\": ch.lineno, \"scope\": prefix,\n                                   \"bases_text\": [dotted(b) for b in ch.bases if dotted(b)],\n                                   \"bases\": [], \"methods\": [],\n                                   \"doc\": (ast.get_docstring(ch) or \"\").strip().split(\"\\n\\n\")[0][:400]}\n                self._collect(ch, q, mod, q)\n            elif isinstance(ch, ast.stmt):\n                self._collect(ch, prefix, mod, cls)\n\n    def _link(self):\n        for q, c in self.classes.items():\n            ctx = SimpleNamespace(module=c[\"module\"], qual=c[\"scope\"], cls=None, types={})\n            c[\"bases\"] = [r for r in (self._lookup(ctx, b) for b in c[\"bases_text\"]) if r in self.classes]\n        for f in self.funcs.values():\n            if f.cls:\n                for k, v in f.types.items():\n                    if k.startswith(\"self.\"):\n                        self.attr_types.setdefault(f.cls, {})[k] = v\n        for f in self.funcs.values():\n            for call in f.calls:\n                call.resolved = self.resolve(f, call.text)\n                if call.resolved in self.funcs:\n                    call.bindings = self._bind(f, call)\n\n    # -- resolution -------------------------------------------------------------\n    def _canonical(self, name):\n        \"\"\"Follow re-exports: pkg.Name where pkg/__init__ does `from .mod import Name`.\"\"\"\n        for _ in range(6):\n            if name in self.funcs or name in self.classes:\n                return name\n            parts = name.split(\".\")\n            for i in range(len(parts) - 1, 0, -1):\n                m = self.modules.get(\".\".join(parts[:i]))\n                if m and parts[i] in m.aliases:\n                    name = \".\".join([m.aliases[parts[i]]] + parts[i + 1:])\n                    break\n            else:\n                return name\n        return name\n\n    def _mro(self, cls_q):\n        seen, queue, out = set(), deque([cls_q]), []\n        while queue:\n            c = queue.popleft()\n            if c in seen or c not in self.classes:\n                continue\n            seen.add(c)\n            out.append(c)\n            queue.extend(self.classes[c][\"bases\"])\n        return out\n\n    def _member(self, cls_q, name):\n        for c in self._mro(cls_q):\n            if f\"{c}.{name}\" in self.funcs:\n                return f\"{c}.{name}\"\n        return None\n\n    def _attr_type(self, cls_q, obj):\n        for c in self._mro(cls_q):\n            t = self.attr_types.get(c, {}).get(obj)\n            if t:\n                return t\n        return None\n\n    def _lookup(self, ctx, text, depth=0):\n        if depth > 3 or not text or text.startswith(\"<\") or text.startswith(\"(\u2026)\"):\n            return None\n        if text.startswith(\"super().\"):\n            name = text[len(\"super().\"):]\n            if ctx.cls and \".\" not in name:\n                for b in self.classes.get(ctx.cls, {}).get(\"bases\", []):\n                    m = self._member(b, name)\n                    if m:\n                        return m\n            return None\n        if \"()\" in text:\n            return None\n        parts = text.split(\".\")\n        head, rest = parts[0], parts[1:]\n        mod = self.modules[ctx.module]\n        cands = []\n        if head in (\"self\", \"cls\") and ctx.cls:\n            cands.append(\".\".join([ctx.cls] + rest) if rest else ctx.cls)\n        cands.append(f\"{ctx.qual}.{text}\")\n        if head in mod.top_names or head in self.module_types.get(ctx.module, {}):\n            cands.append(f\"{ctx.module}.{text}\")\n        if head in mod.aliases:\n            cands.append(\".\".join([mod.aliases[head]] + rest))\n        for i in range(len(parts) - 1, 0, -1):          # x = Cls(); x.method()\n            obj = \".\".join(parts[:i])\n            typ = ctx.types.get(obj) or (self._attr_type(ctx.cls, obj) if ctx.cls else None)\n            if typ and typ != text:\n                tq = self._lookup(ctx, typ, depth + 1)\n                if tq:\n                    cands.append(\".\".join([tq] + parts[i:]))\n                break\n        for c in cands:\n            c = self._canonical(c)\n            if c in self.funcs or c in self.classes:\n                return c\n            owner, _, last = c.rpartition(\".\")\n            if owner in self.classes:\n                m = self._member(owner, last)\n                if m:\n                    return m\n            r = self._via_module_var(c, depth)\n            if r:\n                return r\n        return None\n\n    def _via_module_var(self, name, depth):\n        \"\"\"pkg.mod.router.post where `router = Router()` at module level -> Router.post.\"\"\"\n        parts = name.split(\".\")\n        for i in range(len(parts) - 1, 0, -1):\n            m = \".\".join(parts[:i])\n            if m not in self.modules:\n                continue\n            typ = self.module_types.get(m, {}).get(parts[i])\n            if not typ:\n                return None\n            mctx = SimpleNamespace(module=m, qual=f\"{m}.<module>\", cls=None, types=self.module_types[m])\n            tq = self._lookup(mctx, typ, depth + 1)\n            if tq and i + 1 < len(parts):\n                c = self._canonical(\".\".join([tq] + parts[i + 1:]))\n                if c in self.funcs or c in self.classes:\n                    return c\n                owner, _, last = c.rpartition(\".\")\n                if owner in self.classes:\n                    return self._member(owner, last)\n            return None\n        return None\n\n    def resolve(self, f, text):\n        \"\"\"Map call text to a project qualname, or None when external/unknown.\"\"\"\n        q = self._lookup(f, text)\n        if q in self.classes:\n            return self._member(q, \"__init__\") or q\n        return q\n\n    def _bind(self, f, call):\n        \"\"\"Map a call's arguments onto the callee's parameters.\"\"\"\n        g = self.funcs[call.resolved]\n        is_static = any(d.split(\"(\")[0].endswith(\"staticmethod\") for d in g.decorators)\n        is_classm = any(d.split(\"(\")[0].endswith(\"classmethod\") for d in g.decorators)\n        skip = g.kind == \"method\" and not is_static\n        owner = call.text.rpartition(\".\")[0]\n        if (skip and owner and owner not in (\"self\", \"cls\") and g.name != \"__init__\" and not is_classm\n                and not owner.startswith(\"super()\")):\n            if self._lookup(f, owner) in self.classes:\n                skip = False                      # Base.method(self, x): self passed explicitly\n        pos = g.pos_params[1:] if skip else list(g.pos_params)\n        out = []\n        for i, a in enumerate(call.args):\n            if a[\"star\"]:\n                break\n            if i < len(pos):\n                out.append((a[\"src\"], pos[i]))\n            elif g.vararg:\n                out.append((a[\"src\"], g.vararg))\n        for k, ids in call.kwargs.items():\n            if k != \"**\" and k in g.param_names:\n                out.append((ids, k))\n            elif g.kwarg:\n                out.append((ids, g.kwarg))\n        return [(ids, p) for ids, p in out if ids]\n\n    # -- graphs -----------------------------------------------------------------\n    def gid(self, q, local):\n        f = self.funcs[q]\n        if f.cls and local.startswith(\"var:self.\"):\n            return f\"{f.cls}::attr:{local[len('var:self.'):]}\"\n        return f\"{q}::{local}\"\n\n    def global_flows(self):\n        \"\"\"Whole-program value-flow edges: (src_gid, dst_gid, label, kind).\"\"\"\n        if hasattr(self, \"_gflows\"):\n            return self._gflows\n        out = []\n        returns = {q for q, f in self.funcs.items() if any(d == \"return\" for _, d, _ in f.flows)}\n        for q, f in self.funcs.items():\n            bound = defaultdict(set)                 # call node -> sources consumed by bindings\n            for c in f.calls:\n                if c.resolved in self.funcs:\n                    for ids, _ in c.bindings:\n                        bound[c.node].update(ids)\n            for s, d, lab in dict.fromkeys(f.flows):\n                if s in bound.get(d, ()):\n                    continue                         # replaced by precise arg -> param edge\n                out.append((self.gid(q, s), self.gid(q, d), lab, \"local\"))\n            for c in f.calls:\n                if c.resolved not in self.funcs:\n                    continue\n                cid = self.gid(q, c.node)\n                for ids, p in c.bindings:\n                    for s in ids:\n                        out.append((self.gid(q, s), self.gid(c.resolved, f\"var:{p}\"), p, \"param\"))\n                if c.resolved in returns:\n                    out.append((self.gid(c.resolved, \"return\"), cid, \"returns\", \"return\"))\n        self._gflows = list(dict.fromkeys(out))\n        return self._gflows\n\n    def trace(self, start, direction=\"forward\", limit=400):\n        \"\"\"BFS over global flows. Returns [(gid, depth, (prev_gid, label, kind) | None)].\"\"\"\n        adj = defaultdict(list)\n        for s, d, lab, kind in self.global_flows():\n            if direction == \"forward\":\n                adj[s].append((d, lab, kind))\n            else:\n                adj[d].append((s, lab, kind))\n        seen = {start: (0, None)}\n        order, queue = [start], deque([start])\n        while queue and len(order) < limit:\n            n = queue.popleft()\n            for m, lab, kind in adj.get(n, []):\n                if m not in seen:\n                    seen[m] = (seen[n][0] + 1, (n, lab, kind))\n                    order.append(m)\n                    queue.append(m)\n        return [(n, *seen[n]) for n in order]\n\n    def module_of(self, name):\n        parts = name.split(\".\")\n        for i in range(len(parts), 0, -1):\n            m = \".\".join(parts[:i])\n            if m in self.modules:\n                return m\n        return None\n\n    def module_deps(self):\n        deps = {}\n        for m in self.modules.values():\n            targets = {self.module_of(t) for t in m.aliases.values()}\n            deps[m.name] = sorted(t for t in targets if t and t != m.name)\n        return deps\n\n    def libraries(self):\n        \"\"\"Third-party packages the project imports -> modules that import them.\"\"\"\n        std = set(getattr(sys, \"stdlib_module_names\", ())) | {\"__future__\"}\n        used = defaultdict(set)\n        for m in self.modules.values():\n            for target in m.aliases.values():\n                top = target.split(\".\")[0]\n                if top and top not in std and top not in self.modules and not self.module_of(target):\n                    used[top].add(m.name)\n        return {k: sorted(v) for k, v in sorted(used.items(), key=lambda kv: (-len(kv[1]), kv[0]))}\n\n    def find(self, name):\n        if name in self.funcs:\n            return name\n        if f\"{name}.<module>\" in self.funcs:\n            return f\"{name}.<module>\"\n        hits = [q for q in self.funcs if q.endswith(\".\" + name)]\n        if len(hits) == 1:\n            return hits[0]\n        msg = \"not found\" if not hits else \"is ambiguous: \" + \", \".join(sorted(hits))\n        raise LookupError(f\"'{name}' {msg}\")\n\n    def stats(self):\n        calls = [c for f in self.funcs.values() for c in f.calls]\n        internal = sum(1 for c in calls if c.resolved)\n        return {\"modules\": len(self.modules), \"functions\": sum(1 for f in self.funcs.values() if f.kind != \"module\"),\n                \"classes\": len(self.classes), \"calls\": len(calls), \"internal_calls\": internal,\n                \"lines\": sum(m.text.count(\"\\n\") + 1 for m in self.modules.values()),\n                \"elapsed_ms\": round(self.elapsed * 1000)}\n\n    def to_json(self):\n        deps = self.module_deps()\n        funcs = {}\n        for q, f in self.funcs.items():\n            funcs[q] = {\"name\": f.name, \"module\": f.module, \"cls\": f.cls, \"kind\": f.kind, \"file\": f.file,\n                        \"line\": f.line, \"end\": f.end, \"params\": f.params, \"decorators\": f.decorators,\n                        \"doc\": f.doc, \"async\": f.is_async, \"entry\": f.entry, \"complexity\": f.complexity,\n                        \"calls\": [{\"text\": c.text, \"line\": c.line, \"resolved\": c.resolved,\n                                   \"binds\": [p for _, p in c.bindings]} for c in f.calls],\n                        \"flows\": [list(x) for x in dict.fromkeys(f.flows)]}\n        files = {}\n        if self.include_source:\n            for m in self.modules.values():\n                files[m.file] = m.text if len(m.text) <= MAX_FILE_CHARS else m.text[:MAX_FILE_CHARS]\n        return {\n            \"meta\": {\"root\": str(self.root), \"name\": self.root.name, \"version\": VERSION,\n                     \"generated\": time.strftime(\"%Y-%m-%d %H:%M\"), \"stats\": self.stats(),\n                     \"libraries\": self.libraries(), \"exclude\": sorted(self.exclude), \"served\": False},\n            \"modules\": {n: {\"file\": m.file, \"pkg\": m.is_pkg, \"lines\": m.text.count(\"\\n\") + 1,\n                            \"imports\": deps[n]} for n, m in self.modules.items()},\n            \"classes\": {q: {k: c[k] for k in (\"module\", \"file\", \"line\", \"bases\", \"bases_text\", \"methods\", \"doc\")}\n                        for q, c in self.classes.items()},\n            \"functions\": funcs,\n            \"gflows\": [list(x) for x in self.global_flows()],\n            \"files\": files,\n            \"errors\": self.errors,\n        }\n"</script>
+<script id="cf-data" type="application/json">{"meta":{"root":"D:\\Project\\codeflow\\examples\\sample_shop","name":"sample_shop","version":"0.2.0","generated":"2026-09-24 01:56","stats":{"modules":9,"functions":16,"classes":4,"calls":31,"internal_calls":13,"lines":118,"elapsed_ms":9},"libraries":{},"exclude":[],"served":false},"modules":{"main":{"file":"main.py","pkg":false,"lines":7,"imports":["shop.router","shop.web"]},"shop":{"file":"shop/__init__.py","pkg":true,"lines":4,"imports":["shop.api"]},"shop.api":{"file":"shop/api.py","pkg":false,"lines":10,"imports":["shop.service","shop.validation"]},"shop.pricing":{"file":"shop/pricing.py","pkg":false,"lines":19,"imports":[]},"shop.repository":{"file":"shop/repository.py","pkg":false,"lines":23,"imports":[]},"shop.router":{"file":"shop/router.py","pkg":false,"lines":19,"imports":[]},"shop.service":{"file":"shop/service.py","pkg":false,"lines":16,"imports":["shop.pricing","shop.repository"]},"shop.validation":{"file":"shop/validation.py","pkg":false,"lines":10,"imports":[]},"shop.web":{"file":"shop/web.py","pkg":false,"lines":10,"imports":["shop","shop.router"]}},"classes":{"shop.repository.BaseRepository":{"module":"shop.repository","file":"shop/repository.py","line":5,"bases":[],"bases_text":[],"methods":["shop.repository.BaseRepository.__init__","shop.repository.BaseRepository._serialize"],"doc":"Shared persistence helpers."},"shop.repository.OrderRepository":{"module":"shop.repository","file":"shop/repository.py","line":15,"bases":["shop.repository.BaseRepository"],"bases_text":["BaseRepository"],"methods":["shop.repository.OrderRepository.save"],"doc":"Stores orders in memory (stand-in for a database)."},"shop.router.Router":{"module":"shop.router","file":"shop/router.py","line":1,"bases":[],"bases_text":[],"methods":["shop.router.Router.__init__","shop.router.Router.post","shop.router.Router.dispatch"],"doc":"Tiny stand-in for a FastAPI/Flask router so the example runs with no dependencies."},"shop.service.CheckoutService":{"module":"shop.service","file":"shop/service.py","line":5,"bases":[],"bases_text":[],"methods":["shop.service.CheckoutService.__init__","shop.service.CheckoutService.checkout"],"doc":""}},"functions":{"main.<module>":{"name":"<module>","module":"main","cls":null,"kind":"module","file":"main.py","line":1,"end":7,"params":[],"decorators":[],"doc":"","async":false,"entry":{"kind":"main","label":"python main.py"},"complexity":2,"calls":[{"text":"print","line":6,"resolved":null,"binds":[]},{"text":"router.dispatch","line":6,"resolved":"shop.router.Router.dispatch","binds":["body"]}],"flows":[["call:router.dispatch@6","call:print@6","arg"],["var:request","call:router.dispatch@6","arg"]]},"shop.api.handle_checkout":{"name":"handle_checkout","module":"shop.api","cls":null,"kind":"function","file":"shop/api.py","line":5,"end":9,"params":["request"],"decorators":[],"doc":"","async":false,"entry":null,"complexity":1,"calls":[{"text":"validate_request","line":6,"resolved":"shop.validation.validate_request","binds":["request"]},{"text":"CheckoutService","line":7,"resolved":"shop.service.CheckoutService.__init__","binds":[]},{"text":"service.checkout","line":8,"resolved":"shop.service.CheckoutService.checkout","binds":["user_id","items"]}],"flows":[["var:order","return","return"],["call:service.checkout@8","var:order","="],["var:payload","call:service.checkout@8","arg"],["var:service","call:service.checkout@8","on"],["call:CheckoutService@7","var:service","="],["call:validate_request@6","var:payload","="],["var:request","call:validate_request@6","arg"]]},"shop.pricing.price_items":{"name":"price_items","module":"shop.pricing","cls":null,"kind":"function","file":"shop/pricing.py","line":5,"end":10,"params":["items"],"decorators":[],"doc":"","async":false,"entry":null,"complexity":2,"calls":[{"text":"lookup_price","line":8,"resolved":"shop.pricing.lookup_price","binds":["sku"]},{"text":"lines.append","line":9,"resolved":null,"binds":[]},{"text":"apply_tax","line":9,"resolved":"shop.pricing.apply_tax","binds":["amount"]}],"flows":[["var:lines","return","return"],["var:items","var:item","each"],["var:item","call:lines.append@9","arg"],["call:apply_tax@9","call:lines.append@9","arg"],["call:lines.append@9","var:lines","mutates"],["var:item","call:apply_tax@9","arg"],["var:unit","call:apply_tax@9","arg"],["call:lookup_price@8","var:unit","="],["var:item","call:lookup_price@8","arg"]]},"shop.pricing.lookup_price":{"name":"lookup_price","module":"shop.pricing","cls":null,"kind":"function","file":"shop/pricing.py","line":13,"end":14,"params":["sku"],"decorators":[],"doc":"","async":false,"entry":null,"complexity":1,"calls":[{"text":"PRICES.get","line":14,"resolved":null,"binds":[]}],"flows":[["call:PRICES.get@14","return","return"],["var:sku","call:PRICES.get@14","arg"],["var:PRICES","call:PRICES.get@14","on"]]},"shop.pricing.apply_tax":{"name":"apply_tax","module":"shop.pricing","cls":null,"kind":"function","file":"shop/pricing.py","line":17,"end":18,"params":["amount"],"decorators":[],"doc":"","async":false,"entry":null,"complexity":1,"calls":[{"text":"round","line":18,"resolved":null,"binds":[]}],"flows":[["call:round@18","return","return"],["var:TAX_RATE","call:round@18","arg"],["var:amount","call:round@18","arg"]]},"shop.repository.BaseRepository.__init__":{"name":"__init__","module":"shop.repository","cls":"shop.repository.BaseRepository","kind":"method","file":"shop/repository.py","line":8,"end":9,"params":["self"],"decorators":[],"doc":"","async":false,"entry":null,"complexity":1,"calls":[],"flows":[]},"shop.repository.BaseRepository._serialize":{"name":"_serialize","module":"shop.repository","cls":"shop.repository.BaseRepository","kind":"method","file":"shop/repository.py","line":11,"end":12,"params":["self","obj"],"decorators":[],"doc":"","async":false,"entry":null,"complexity":1,"calls":[{"text":"json.dumps","line":12,"resolved":null,"binds":[]}],"flows":[["call:json.dumps@12","return","return"],["var:obj","call:json.dumps@12","arg"]]},"shop.repository.OrderRepository.save":{"name":"save","module":"shop.repository","cls":"shop.repository.OrderRepository","kind":"method","file":"shop/repository.py","line":18,"end":22,"params":["self","order"],"decorators":[],"doc":"","async":false,"entry":null,"complexity":1,"calls":[{"text":"uuid.uuid4","line":19,"resolved":null,"binds":[]},{"text":"self._serialize","line":20,"resolved":"shop.repository.BaseRepository._serialize","binds":["obj"]},{"text":"self.rows.append","line":21,"resolved":null,"binds":[]}],"flows":[["var:order_id","return","return"],["var:record","call:self.rows.append@21","arg"],["call:self.rows.append@21","var:self.rows","mutates"],["call:self._serialize@20","var:record","="],["var:order","call:self._serialize@20","arg"],["var:order_id","call:self._serialize@20","arg"],["var:self","call:self._serialize@20","on"],["call:uuid.uuid4@19","var:order_id","="]]},"shop.router.<module>":{"name":"<module>","module":"shop.router","cls":null,"kind":"module","file":"shop/router.py","line":1,"end":19,"params":[],"decorators":[],"doc":"","async":false,"entry":null,"complexity":1,"calls":[{"text":"Router","line":18,"resolved":"shop.router.Router.__init__","binds":[]}],"flows":[["call:Router@18","var:router","="]]},"shop.router.Router.__init__":{"name":"__init__","module":"shop.router","cls":"shop.router.Router","kind":"method","file":"shop/router.py","line":4,"end":5,"params":["self"],"decorators":[],"doc":"","async":false,"entry":null,"complexity":1,"calls":[],"flows":[]},"shop.router.Router.post":{"name":"post","module":"shop.router","cls":"shop.router.Router","kind":"method","file":"shop/router.py","line":7,"end":11,"params":["self","path"],"decorators":[],"doc":"","async":false,"entry":null,"complexity":1,"calls":[],"flows":[["var:register","return","return"]]},"shop.router.Router.post.register":{"name":"register","module":"shop.router","cls":null,"kind":"function","file":"shop/router.py","line":8,"end":10,"params":["fn"],"decorators":[],"doc":"","async":false,"entry":null,"complexity":1,"calls":[],"flows":[["var:fn","return","return"],["var:fn","var:self.routes","="]]},"shop.router.Router.dispatch":{"name":"dispatch","module":"shop.router","cls":"shop.router.Router","kind":"method","file":"shop/router.py","line":13,"end":15,"params":["self","method","path","body"],"decorators":[],"doc":"","async":false,"entry":null,"complexity":1,"calls":[{"text":"handler","line":15,"resolved":null,"binds":[]}],"flows":[["call:handler@15","return","return"],["var:body","call:handler@15","arg"],["var:method","var:handler","="],["var:path","var:handler","="],["var:self.routes","var:handler","="]]},"shop.service.CheckoutService.__init__":{"name":"__init__","module":"shop.service","cls":"shop.service.CheckoutService","kind":"method","file":"shop/service.py","line":6,"end":7,"params":["self"],"decorators":[],"doc":"","async":false,"entry":null,"complexity":1,"calls":[{"text":"OrderRepository","line":7,"resolved":"shop.repository.BaseRepository.__init__","binds":[]}],"flows":[["call:OrderRepository@7","var:self.repo","="]]},"shop.service.CheckoutService.checkout":{"name":"checkout","module":"shop.service","cls":"shop.service.CheckoutService","kind":"method","file":"shop/service.py","line":9,"end":15,"params":["self","user_id","items"],"decorators":[],"doc":"","async":false,"entry":null,"complexity":2,"calls":[{"text":"price_items","line":10,"resolved":"shop.pricing.price_items","binds":["items"]},{"text":"round","line":11,"resolved":null,"binds":[]},{"text":"sum","line":11,"resolved":null,"binds":[]},{"text":"self.repo.save","line":13,"resolved":"shop.repository.OrderRepository.save","binds":["order"]}],"flows":[["var:order","return","return"],["var:order_id","var:order","="],["call:self.repo.save@13","var:order_id","="],["var:order","call:self.repo.save@13","arg"],["var:self.repo","call:self.repo.save@13","on"],["var:priced","var:order","="],["var:total","var:order","="],["var:user_id","var:order","="],["call:round@11","var:total","="],["call:sum@11","call:round@11","arg"],["var:line","call:sum@11","arg"],["var:priced","call:sum@11","arg"],["var:priced","var:line","each"],["call:price_items@10","var:priced","="],["var:items","call:price_items@10","arg"]]},"shop.validation.validate_request":{"name":"validate_request","module":"shop.validation","cls":null,"kind":"function","file":"shop/validation.py","line":1,"end":5,"params":["request"],"decorators":[],"doc":"","async":false,"entry":null,"complexity":4,"calls":[{"text":"request.get","line":2,"resolved":null,"binds":[]},{"text":"ValueError","line":3,"resolved":null,"binds":[]},{"text":"normalize_item","line":4,"resolved":"shop.validation.normalize_item","binds":["item"]},{"text":"int","line":5,"resolved":null,"binds":[]}],"flows":[["var:items","return","return"],["call:int@5","return","return"],["var:request","call:int@5","arg"],["var:request","var:items","="],["call:normalize_item@4","var:items","="],["var:request","var:i","each"],["var:i","call:normalize_item@4","arg"],["var:request","call:request.get@2","on"]]},"shop.validation.normalize_item":{"name":"normalize_item","module":"shop.validation","cls":null,"kind":"function","file":"shop/validation.py","line":8,"end":9,"params":["item"],"decorators":[],"doc":"","async":false,"entry":null,"complexity":1,"calls":[{"text":"max","line":9,"resolved":null,"binds":[]},{"text":"int","line":9,"resolved":null,"binds":[]},{"text":"item.get","line":9,"resolved":null,"binds":[]},{"text":"(…).upper","line":9,"resolved":null,"binds":[]},{"text":"(…).strip","line":9,"resolved":null,"binds":[]}],"flows":[["call:max@9","return","return"],["call:(…).upper@9","return","return"],["call:int@9","call:max@9","arg"],["call:item.get@9","call:int@9","arg"],["var:item","call:item.get@9","on"],["call:(…).strip@9","call:(…).upper@9","on"],["var:item","call:(…).strip@9","on"]]},"shop.web.checkout_endpoint":{"name":"checkout_endpoint","module":"shop.web","cls":null,"kind":"function","file":"shop/web.py","line":5,"end":9,"params":["body"],"decorators":["router.post(\"/checkout\")"],"doc":"HTTP entry point: POST /checkout.","async":false,"entry":{"kind":"route","label":"POST /checkout"},"complexity":1,"calls":[{"text":"handle_checkout","line":8,"resolved":"shop.api.handle_checkout","binds":["request"]}],"flows":[["var:result","return","return"],["call:handle_checkout@8","var:result","="],["var:body","call:handle_checkout@8","arg"]]}},"gflows":[["main.<module>::call:router.dispatch@6","main.<module>::call:print@6","arg","local"],["main.<module>::var:request","shop.router.Router.dispatch::var:body","body","param"],["shop.router.Router.dispatch::return","main.<module>::call:router.dispatch@6","returns","return"],["shop.api.handle_checkout::var:order","shop.api.handle_checkout::return","return","local"],["shop.api.handle_checkout::call:service.checkout@8","shop.api.handle_checkout::var:order","=","local"],["shop.api.handle_checkout::var:service","shop.api.handle_checkout::call:service.checkout@8","on","local"],["shop.api.handle_checkout::call:CheckoutService@7","shop.api.handle_checkout::var:service","=","local"],["shop.api.handle_checkout::call:validate_request@6","shop.api.handle_checkout::var:payload","=","local"],["shop.api.handle_checkout::var:request","shop.validation.validate_request::var:request","request","param"],["shop.validation.validate_request::return","shop.api.handle_checkout::call:validate_request@6","returns","return"],["shop.api.handle_checkout::var:payload","shop.service.CheckoutService.checkout::var:user_id","user_id","param"],["shop.api.handle_checkout::var:payload","shop.service.CheckoutService.checkout::var:items","items","param"],["shop.service.CheckoutService.checkout::return","shop.api.handle_checkout::call:service.checkout@8","returns","return"],["shop.pricing.price_items::var:lines","shop.pricing.price_items::return","return","local"],["shop.pricing.price_items::var:items","shop.pricing.price_items::var:item","each","local"],["shop.pricing.price_items::var:item","shop.pricing.price_items::call:lines.append@9","arg","local"],["shop.pricing.price_items::call:apply_tax@9","shop.pricing.price_items::call:lines.append@9","arg","local"],["shop.pricing.price_items::call:lines.append@9","shop.pricing.price_items::var:lines","mutates","local"],["shop.pricing.price_items::call:lookup_price@8","shop.pricing.price_items::var:unit","=","local"],["shop.pricing.price_items::var:item","shop.pricing.lookup_price::var:sku","sku","param"],["shop.pricing.lookup_price::return","shop.pricing.price_items::call:lookup_price@8","returns","return"],["shop.pricing.price_items::var:item","shop.pricing.apply_tax::var:amount","amount","param"],["shop.pricing.price_items::var:unit","shop.pricing.apply_tax::var:amount","amount","param"],["shop.pricing.apply_tax::return","shop.pricing.price_items::call:apply_tax@9","returns","return"],["shop.pricing.lookup_price::call:PRICES.get@14","shop.pricing.lookup_price::return","return","local"],["shop.pricing.lookup_price::var:sku","shop.pricing.lookup_price::call:PRICES.get@14","arg","local"],["shop.pricing.lookup_price::var:PRICES","shop.pricing.lookup_price::call:PRICES.get@14","on","local"],["shop.pricing.apply_tax::call:round@18","shop.pricing.apply_tax::return","return","local"],["shop.pricing.apply_tax::var:TAX_RATE","shop.pricing.apply_tax::call:round@18","arg","local"],["shop.pricing.apply_tax::var:amount","shop.pricing.apply_tax::call:round@18","arg","local"],["shop.repository.BaseRepository._serialize::call:json.dumps@12","shop.repository.BaseRepository._serialize::return","return","local"],["shop.repository.BaseRepository._serialize::var:obj","shop.repository.BaseRepository._serialize::call:json.dumps@12","arg","local"],["shop.repository.OrderRepository.save::var:order_id","shop.repository.OrderRepository.save::return","return","local"],["shop.repository.OrderRepository.save::var:record","shop.repository.OrderRepository.save::call:self.rows.append@21","arg","local"],["shop.repository.OrderRepository.save::call:self.rows.append@21","shop.repository.OrderRepository::attr:rows","mutates","local"],["shop.repository.OrderRepository.save::call:self._serialize@20","shop.repository.OrderRepository.save::var:record","=","local"],["shop.repository.OrderRepository.save::var:self","shop.repository.OrderRepository.save::call:self._serialize@20","on","local"],["shop.repository.OrderRepository.save::call:uuid.uuid4@19","shop.repository.OrderRepository.save::var:order_id","=","local"],["shop.repository.OrderRepository.save::var:order","shop.repository.BaseRepository._serialize::var:obj","obj","param"],["shop.repository.OrderRepository.save::var:order_id","shop.repository.BaseRepository._serialize::var:obj","obj","param"],["shop.repository.BaseRepository._serialize::return","shop.repository.OrderRepository.save::call:self._serialize@20","returns","return"],["shop.router.<module>::call:Router@18","shop.router.<module>::var:router","=","local"],["shop.router.Router.post::var:register","shop.router.Router.post::return","return","local"],["shop.router.Router.post.register::var:fn","shop.router.Router.post.register::return","return","local"],["shop.router.Router.post.register::var:fn","shop.router.Router.post.register::var:self.routes","=","local"],["shop.router.Router.dispatch::call:handler@15","shop.router.Router.dispatch::return","return","local"],["shop.router.Router.dispatch::var:body","shop.router.Router.dispatch::call:handler@15","arg","local"],["shop.router.Router.dispatch::var:method","shop.router.Router.dispatch::var:handler","=","local"],["shop.router.Router.dispatch::var:path","shop.router.Router.dispatch::var:handler","=","local"],["shop.router.Router::attr:routes","shop.router.Router.dispatch::var:handler","=","local"],["shop.service.CheckoutService.__init__::call:OrderRepository@7","shop.service.CheckoutService::attr:repo","=","local"],["shop.service.CheckoutService.checkout::var:order","shop.service.CheckoutService.checkout::return","return","local"],["shop.service.CheckoutService.checkout::var:order_id","shop.service.CheckoutService.checkout::var:order","=","local"],["shop.service.CheckoutService.checkout::call:self.repo.save@13","shop.service.CheckoutService.checkout::var:order_id","=","local"],["shop.service.CheckoutService::attr:repo","shop.service.CheckoutService.checkout::call:self.repo.save@13","on","local"],["shop.service.CheckoutService.checkout::var:priced","shop.service.CheckoutService.checkout::var:order","=","local"],["shop.service.CheckoutService.checkout::var:total","shop.service.CheckoutService.checkout::var:order","=","local"],["shop.service.CheckoutService.checkout::var:user_id","shop.service.CheckoutService.checkout::var:order","=","local"],["shop.service.CheckoutService.checkout::call:round@11","shop.service.CheckoutService.checkout::var:total","=","local"],["shop.service.CheckoutService.checkout::call:sum@11","shop.service.CheckoutService.checkout::call:round@11","arg","local"],["shop.service.CheckoutService.checkout::var:line","shop.service.CheckoutService.checkout::call:sum@11","arg","local"],["shop.service.CheckoutService.checkout::var:priced","shop.service.CheckoutService.checkout::call:sum@11","arg","local"],["shop.service.CheckoutService.checkout::var:priced","shop.service.CheckoutService.checkout::var:line","each","local"],["shop.service.CheckoutService.checkout::call:price_items@10","shop.service.CheckoutService.checkout::var:priced","=","local"],["shop.service.CheckoutService.checkout::var:items","shop.pricing.price_items::var:items","items","param"],["shop.pricing.price_items::return","shop.service.CheckoutService.checkout::call:price_items@10","returns","return"],["shop.service.CheckoutService.checkout::var:order","shop.repository.OrderRepository.save::var:order","order","param"],["shop.repository.OrderRepository.save::return","shop.service.CheckoutService.checkout::call:self.repo.save@13","returns","return"],["shop.validation.validate_request::var:items","shop.validation.validate_request::return","return","local"],["shop.validation.validate_request::call:int@5","shop.validation.validate_request::return","return","local"],["shop.validation.validate_request::var:request","shop.validation.validate_request::call:int@5","arg","local"],["shop.validation.validate_request::var:request","shop.validation.validate_request::var:items","=","local"],["shop.validation.validate_request::call:normalize_item@4","shop.validation.validate_request::var:items","=","local"],["shop.validation.validate_request::var:request","shop.validation.validate_request::var:i","each","local"],["shop.validation.validate_request::var:request","shop.validation.validate_request::call:request.get@2","on","local"],["shop.validation.validate_request::var:i","shop.validation.normalize_item::var:item","item","param"],["shop.validation.normalize_item::return","shop.validation.validate_request::call:normalize_item@4","returns","return"],["shop.validation.normalize_item::call:max@9","shop.validation.normalize_item::return","return","local"],["shop.validation.normalize_item::call:(…).upper@9","shop.validation.normalize_item::return","return","local"],["shop.validation.normalize_item::call:int@9","shop.validation.normalize_item::call:max@9","arg","local"],["shop.validation.normalize_item::call:item.get@9","shop.validation.normalize_item::call:int@9","arg","local"],["shop.validation.normalize_item::var:item","shop.validation.normalize_item::call:item.get@9","on","local"],["shop.validation.normalize_item::call:(…).strip@9","shop.validation.normalize_item::call:(…).upper@9","on","local"],["shop.validation.normalize_item::var:item","shop.validation.normalize_item::call:(…).strip@9","on","local"],["shop.web.checkout_endpoint::var:result","shop.web.checkout_endpoint::return","return","local"],["shop.web.checkout_endpoint::call:handle_checkout@8","shop.web.checkout_endpoint::var:result","=","local"],["shop.web.checkout_endpoint::var:body","shop.api.handle_checkout::var:request","request","param"],["shop.api.handle_checkout::return","shop.web.checkout_endpoint::call:handle_checkout@8","returns","return"]],"files":{"main.py":"from shop import web  # noqa: F401  (registers routes)\nfrom shop.router import router\n\nif __name__ == \"__main__\":\n    request = {\"user_id\": 42, \"items\": [{\"sku\": \"a1 \", \"qty\": 2}, {\"sku\": \"B7\", \"qty\": 1}]}\n    print(router.dispatch(\"POST\", \"/checkout\", request))\n","shop/__init__.py":"from .api import handle_checkout\n\n__all__ = [\"handle_checkout\"]\n","shop/api.py":"from .service import CheckoutService\nfrom .validation import validate_request\n\n\ndef handle_checkout(request):\n    payload = validate_request(request)\n    service = CheckoutService()\n    order = service.checkout(payload[\"user_id\"], payload[\"items\"])\n    return {\"status\": \"ok\", \"order_id\": order[\"id\"], \"total\": order[\"total\"]}\n","shop/pricing.py":"TAX_RATE = 0.08\nPRICES = {\"A1\": 19.99, \"B7\": 5.50}\n\n\ndef price_items(items):\n    lines = []\n    for item in items:\n        unit = lookup_price(item[\"sku\"])\n        lines.append({\"sku\": item[\"sku\"], \"qty\": item[\"qty\"], \"subtotal\": apply_tax(unit * item[\"qty\"])})\n    return lines\n\n\ndef lookup_price(sku):\n    return PRICES.get(sku, 0.0)\n\n\ndef apply_tax(amount):\n    return round(amount * (1 + TAX_RATE), 2)\n","shop/repository.py":"import json\nimport uuid\n\n\nclass BaseRepository:\n    \"\"\"Shared persistence helpers.\"\"\"\n\n    def __init__(self):\n        self.rows = []\n\n    def _serialize(self, obj):\n        return json.dumps(obj, sort_keys=True)\n\n\nclass OrderRepository(BaseRepository):\n    \"\"\"Stores orders in memory (stand-in for a database).\"\"\"\n\n    def save(self, order):\n        order_id = uuid.uuid4().hex[:8]\n        record = self._serialize({\"id\": order_id, **order})\n        self.rows.append(record)\n        return order_id\n","shop/router.py":"class Router:\n    \"\"\"Tiny stand-in for a FastAPI/Flask router so the example runs with no dependencies.\"\"\"\n\n    def __init__(self):\n        self.routes = {}\n\n    def post(self, path):\n        def register(fn):\n            self.routes[(\"POST\", path)] = fn\n            return fn\n        return register\n\n    def dispatch(self, method, path, body):\n        handler = self.routes[(method, path)]\n        return handler(body)\n\n\nrouter = Router()\n","shop/service.py":"from .pricing import price_items\nfrom .repository import OrderRepository\n\n\nclass CheckoutService:\n    def __init__(self):\n        self.repo = OrderRepository()\n\n    def checkout(self, user_id, items):\n        priced = price_items(items)\n        total = round(sum(line[\"subtotal\"] for line in priced), 2)\n        order = {\"user_id\": user_id, \"lines\": priced, \"total\": total}\n        order_id = self.repo.save(order)\n        order[\"id\"] = order_id\n        return order\n","shop/validation.py":"def validate_request(request):\n    if \"user_id\" not in request or not request.get(\"items\"):\n        raise ValueError(\"user_id and items are required\")\n    items = [normalize_item(i) for i in request[\"items\"]]\n    return {\"user_id\": int(request[\"user_id\"]), \"items\": items}\n\n\ndef normalize_item(item):\n    return {\"sku\": item[\"sku\"].strip().upper(), \"qty\": max(1, int(item.get(\"qty\", 1)))}\n","shop/web.py":"from . import handle_checkout\nfrom .router import router\n\n\n@router.post(\"/checkout\")\ndef checkout_endpoint(body):\n    \"\"\"HTTP entry point: POST /checkout.\"\"\"\n    result = handle_checkout(body)\n    return {\"code\": 200, \"json\": result}\n"},"errors":[]}</script>
+<script>
+(() => {
+'use strict';
+const PRISTINE = '<!doctype html>\n' + document.documentElement.outerHTML;   // snapshot before rendering (used to reload with new data)
+const D = JSON.parse(document.getElementById('cf-data').textContent);
+const F = D.functions, C = D.classes, M = D.modules;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const SVGNS = 'http://www.w3.org/2000/svg';
+const svgEl = (tag, attrs, parent) => { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) if (attrs[k] !== undefined) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; };
+const uniq = a => [...new Set(a)];
+const pushTo = (o, k, v) => { (o[k] || (o[k] = [])).push(v); };
+
+// ------------------------------------------------------------------ helpers
+function hue(s) { let h = 0; for (const ch of s || '') h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h % 360; }
+const modColor = m => `hsl(${hue(m)} 60% 52%)`;
+const modOf = q => F[q] ? F[q].module : (C[q] ? C[q].module : '');
+function short(q) {
+  const f = F[q];
+  if (f) {
+    if (f.kind === 'module') return f.module.split('.').pop() + ' ‹module›';
+    return f.cls ? f.cls.split('.').pop() + '.' + f.name : f.name;
+  }
+  return String(q).split('.').pop();
+}
+const cleanParam = p => p.replace(/^\*+/, '');
+function gidOf(q, local) {
+  const f = F[q];
+  if (f && f.cls && local.startsWith('var:self.')) return `${f.cls}::attr:${local.slice(9)}`;
+  return `${q}::${local}`;
+}
+function parseG(g) { const i = g.indexOf('::'); return { owner: g.slice(0, i), local: g.slice(i + 2) }; }
+function localLabel(local) {
+  if (local === 'return') return 'return';
+  const i = local.indexOf(':'), k = local.slice(0, i), r = local.slice(i + 1);
+  if (k === 'var') return r;
+  if (k === 'attr') return 'self.' + r;
+  return r.slice(0, r.lastIndexOf('@')) + '()';
+}
+function localWord(local) {
+  if (local === 'return') return 'return';
+  const l = localLabel(local).replace(/\(\)$/, '');
+  return l.split('.').pop();
+}
+
+// ------------------------------------------------------------------ indexes
+const ALL = Object.keys(F).sort();
+const callees = {}, callers = {}, externals = {};
+for (const q of ALL) {
+  callees[q] = []; externals[q] = [];
+  const seen = new Set();
+  for (const c of F[q].calls) {
+    if (c.resolved) {
+      if (!seen.has(c.resolved)) { seen.add(c.resolved); callees[q].push({ to: c.resolved, line: c.line, text: c.text }); pushTo(callers, c.resolved, { from: q, line: c.line }); }
+    } else externals[q].push(c);
+  }
+}
+const gOut = new Map(), gIn = new Map();
+for (const e of D.gflows) {
+  if (!gOut.has(e[0])) gOut.set(e[0], []); gOut.get(e[0]).push(e);
+  if (!gIn.has(e[1])) gIn.set(e[1], []); gIn.get(e[1]).push(e);
+}
+const entries = ALL.filter(q => F[q].entry);
+const fileLines = {};
+const linesOf = file => fileLines[file] || (fileLines[file] = (D.files[file] || '').split('\n'));
+const fnsOf = m => ALL.filter(q => F[q].module === m).sort((a, b) => F[a].line - F[b].line);
+
+// ------------------------------------------------------------------ state
+const S = { view: 'calls', focus: null, sel: null, down: 3, up: 1, tdepth: 8, orient: { calls: 'LR', flow: 'TB', trace: 'TB', modules: 'LR' }, ext: false, path: null, pathMsg: '', pathTarget: '', trace: null };
+
+// ------------------------------------------------------------------ graph engine (layered layout + pan/zoom)
+const Graph = (() => {
+  const svg = $('#canvas'), vp = $('#viewport'), gE = $('#edges'), gL = $('#elabels'), gN = $('#nodes');
+  const cs = getComputedStyle(document.documentElement);
+  const MONO = (cs.getPropertyValue('--mono') || 'monospace').trim();
+  const SANS = (cs.getPropertyValue('--font') || 'sans-serif').trim();
+  const ctx = document.createElement('canvas').getContext('2d');
+  const GX = 72, GY = 14;
+  let T = { k: 1, x: 0, y: 0 }, nodes = [], edges = [], byId = new Map(), adj = new Map(), H = {}, TB = false;
+
+  function size(n) {
+    ctx.font = '12px ' + MONO; let w = ctx.measureText(n.label).width;
+    if (n.sub) { ctx.font = '10px ' + SANS; w = Math.max(w, ctx.measureText(n.sub).width); }
+    n.w = Math.ceil(w) + (n.color ? 30 : 22) + (n.pill ? 8 : 0); n.h = n.sub ? 42 : 30;
+  }
+  function longest(ns, es) {
+    const out0 = new Map(ns.map(n => [n.id, []]));
+    es.forEach(e => { if (e.s !== e.t) out0.get(e.s).push(e.t); });
+    const state = new Map(), back = new Set();
+    for (const n of ns) {
+      if (state.get(n.id)) continue;
+      const stack = [[n.id, 0]]; state.set(n.id, 1);
+      while (stack.length) {
+        const top = stack[stack.length - 1], v = top[0], outs = out0.get(v);
+        if (top[1] < outs.length) {
+          const w = outs[top[1]++], st = state.get(w);
+          if (st === 1) back.add(v + '\u0001' + w);
+          else if (!st) { state.set(w, 1); stack.push([w, 0]); }
+        } else { state.set(v, 2); stack.pop(); }
+      }
+    }
+    const indeg = new Map(ns.map(n => [n.id, 0])), out = new Map(ns.map(n => [n.id, []]));
+    for (const [u, vs] of out0) for (const v of vs) if (!back.has(u + '\u0001' + v)) { out.get(u).push(v); indeg.set(v, indeg.get(v) + 1); }
+    const idx = new Map(ns.map(n => [n.id, n]));
+    ns.forEach(n => { n.layer = 0; });
+    const q = ns.filter(n => indeg.get(n.id) === 0).map(n => n.id);
+    while (q.length) {
+      const u = q.shift();
+      for (const v of out.get(u)) {
+        const nv = idx.get(v); nv.layer = Math.max(nv.layer, idx.get(u).layer + 1);
+        indeg.set(v, indeg.get(v) - 1); if (indeg.get(v) === 0) q.push(v);
+      }
+    }
+  }
+  function barycenter(layers, keys, es) {
+    const pos = new Map(), up = new Map(), down = new Map();
+    const add = (m, k, v) => { if (!m.has(k)) m.set(k, []); m.get(k).push(v); };
+    es.forEach(e => { if (e.s !== e.t) { add(down, e.s, e.t); add(up, e.t, e.s); } });
+    const setPos = L => L.forEach((n, i) => pos.set(n.id, i - L.length / 2));
+    keys.forEach(k => setPos(layers.get(k)));
+    for (let it = 0; it < 8; it++) {
+      const fwd = it % 2 === 0, seq = fwd ? keys : [...keys].reverse();
+      for (const k of seq) {
+        const L = layers.get(k), val = new Map();
+        L.forEach(n => {
+          const ps = ((fwd ? up : down).get(n.id) || []).map(x => pos.get(x)).filter(v => v !== undefined);
+          val.set(n.id, ps.length ? ps.reduce((a, b) => a + b, 0) / ps.length : pos.get(n.id));
+        });
+        L.sort((a, b) => val.get(a.id) - val.get(b.id));
+        setPos(L);
+      }
+    }
+  }
+  function edgePath(a, b) {
+    if (TB && a !== b) {
+      const x1 = a.x + a.w / 2, y1 = a.y + a.h, x2 = b.x + b.w / 2, y2 = b.y;
+      if (y2 > y1 + 8) { const dy = Math.max(22, (y2 - y1) / 2); return `M${x1},${y1} C${x1},${y1 + dy} ${x2},${y2 - dy} ${x2},${y2}`; }
+      const sx = a.x + a.w, sy = a.y + a.h / 2, tx = b.x + b.w, ty = b.y + b.h / 2;
+      const right = Math.max(sx, tx) + 34 + Math.abs(sy - ty) * 0.12;
+      return `M${sx},${sy} C${right},${sy} ${right},${ty} ${tx},${ty}`;
+    }
+    if (a === b) { const x = a.x + a.w, y = a.y + a.h / 2; return `M${x},${y - 6} C${x + 42},${y - 30} ${x + 42},${y + 30} ${x},${y + 6}`; }
+    const x1 = a.x + a.w, y1 = a.y + a.h / 2, x2 = b.x, y2 = b.y + b.h / 2;
+    if (x2 > x1 + 8) { const dx = Math.max(28, (x2 - x1) / 2); return `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`; }
+    const sx = a.x + a.w / 2, sy = a.y + a.h, tx = b.x + b.w / 2, ty = b.y + b.h;
+    const low = Math.max(sy, ty) + 36 + Math.abs(sx - tx) * 0.12;
+    return `M${sx},${sy} C${sx},${low} ${tx},${low} ${tx},${ty}`;
+  }
+  function apply() { vp.setAttribute('transform', `translate(${T.x},${T.y}) scale(${T.k})`); }
+  function clear() { gE.textContent = ''; gL.textContent = ''; gN.textContent = ''; nodes = []; edges = []; }
+  function draw(ns, es, h = {}) {
+    h = Object.assign({ dir: S.orient[S.view] }, h);
+    H = h; $('#empty').hidden = true; clear();
+    nodes = ns; byId = new Map(ns.map(n => [n.id, n]));
+    edges = es.filter(e => byId.has(e.s) && byId.has(e.t));
+    ns.forEach(size);
+    if (ns.some(n => n.layer === undefined)) longest(ns, edges);
+    const layers = new Map();
+    ns.forEach(n => { if (!layers.has(n.layer)) layers.set(n.layer, []); layers.get(n.layer).push(n); });
+    const keys = [...layers.keys()].sort((a, b) => a - b);
+    keys.forEach(k => layers.get(k).sort((a, b) => (a.rank || 0) - (b.rank || 0) || String(a.group || '').localeCompare(String(b.group || '')) || a.label.localeCompare(b.label)));
+    barycenter(layers, keys, edges);
+    TB = h.dir === 'TB';
+    if (TB) {
+      let y = 0;
+      for (const k of keys) {
+        const L = layers.get(k), hm = Math.max(...L.map(n => n.h));
+        let x = -(L.reduce((s, n) => s + n.w + 18, 0) - 18) / 2;
+        for (const n of L) { n.x = x; n.y = y + (hm - n.h) / 2; x += n.w + 18; }
+        y += hm + 58;
+      }
+    } else {
+      let x = 0;
+      for (const k of keys) {
+        const L = layers.get(k), w = Math.max(...L.map(n => n.w));
+        let y = -(L.reduce((s, n) => s + n.h + GY, 0) - GY) / 2;
+        for (const n of L) { n.x = x; n.y = y; y += n.h + GY; }
+        x += w + GX;
+      }
+    }
+    adj = new Map(ns.map(n => [n.id, []]));
+    for (const e of edges) {
+      const a = byId.get(e.s), b = byId.get(e.t);
+      e.el = svgEl('path', { d: edgePath(a, b), class: 'edge ' + (e.cls || '') + (e.mark ? ' mark' : '') }, gE);
+      adj.get(a.id).push(e); if (a !== b) adj.get(b.id).push(e);
+      if (h.edgeLabels && e.label) {
+        const len = e.el.getTotalLength(), pt = e.el.getPointAtLength(len / 2);
+        e.lel = svgEl('text', { x: pt.x, y: pt.y - 3, class: 'elabel', 'text-anchor': 'middle' }, gL);
+        e.lel.textContent = e.label;
+      }
+    }
+    for (const n of ns) {
+      const g = svgEl('g', { class: 'node ' + (n.cls || '') + (n.mark ? ' mark' : '') + (n.id === h.selected ? ' sel' : ''), transform: `translate(${n.x},${n.y})` }, gN);
+      n.el = g;
+      const r = n.pill ? n.h / 2 : 6;
+      svgEl('rect', { class: 'bg', width: n.w, height: n.h, rx: r, ry: r }, g);
+      if (n.color) svgEl('rect', { x: n.pill ? 10 : 6, y: 8, width: 4, height: n.h - 16, rx: 2, fill: n.color }, g);
+      const tx = (n.color ? 16 : 11) + (n.pill ? 4 : 0);
+      svgEl('text', { x: tx, y: n.sub ? 17 : 19 }, g).textContent = n.label;
+      if (n.sub) svgEl('text', { x: tx, y: 32, class: 'sub' }, g).textContent = n.sub;
+      svgEl('title', {}, g).textContent = n.title || n.label;
+      g.addEventListener('mouseenter', () => hover(n, true));
+      g.addEventListener('mouseleave', () => hover(n, false));
+      g.addEventListener('click', ev => { ev.stopPropagation(); select(n.id); if (H.click) H.click(n); });
+      g.addEventListener('dblclick', ev => { ev.stopPropagation(); if (H.dbl) H.dbl(n); });
+    }
+    fit();
+  }
+  function hover(n, on) {
+    svg.classList.toggle('hovering', on);
+    n.el.classList.toggle('hot', on);
+    for (const e of adj.get(n.id) || []) {
+      e.el.classList.toggle('hot', on); if (e.lel) e.lel.classList.toggle('hot', on);
+      const o = byId.get(e.s === n.id ? e.t : e.s); if (o && o.el) o.el.classList.toggle('hot', on);
+    }
+  }
+  function select(id) { nodes.forEach(n => n.el && n.el.classList.toggle('sel', n.id === id)); }
+  function fit() {
+    if (!nodes.length) return;
+    const r = svg.getBoundingClientRect();
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    nodes.forEach(n => { x0 = Math.min(x0, n.x); y0 = Math.min(y0, n.y); x1 = Math.max(x1, n.x + n.w); y1 = Math.max(y1, n.y + n.h); });
+    if (TB) x1 += 40; else y1 += 40;
+    const top = 60, pad = 36, W = Math.max(50, r.width - pad * 2), Hh = Math.max(50, r.height - top - 56);
+    const k = Math.max(0.12, Math.min(1.25, W / (x1 - x0), Hh / (y1 - y0)));
+    T = { k, x: pad + (W - (x1 - x0) * k) / 2 - x0 * k, y: top + (Hh - (y1 - y0) * k) / 2 - y0 * k };
+    apply();
+  }
+  function center(id) {
+    const n = byId.get(id); if (!n) return;
+    const r = svg.getBoundingClientRect();
+    T.x = r.width / 2 - (n.x + n.w / 2) * T.k; T.y = r.height / 2 - (n.y + n.h / 2) * T.k; apply();
+  }
+  function zoomAt(f, cx, cy) {
+    const k = Math.min(3, Math.max(0.08, T.k * f));
+    T.x = cx - (cx - T.x) * (k / T.k); T.y = cy - (cy - T.y) * (k / T.k); T.k = k; apply();
+  }
+  function zoom(f) { const r = svg.getBoundingClientRect(); zoomAt(f, r.width / 2, r.height / 2); }
+  svg.addEventListener('wheel', e => { e.preventDefault(); const r = svg.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+  let drag = null;
+  svg.addEventListener('pointerdown', e => {
+    if (e.target.closest && e.target.closest('.node')) return;
+    drag = { x: e.clientX, y: e.clientY, tx: T.x, ty: T.y, moved: false };
+    svg.setPointerCapture(e.pointerId); svg.classList.add('dragging');
+  });
+  svg.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (Math.abs(dx) + Math.abs(dy) > 3) drag.moved = true;
+    T.x = drag.tx + dx; T.y = drag.ty + dy; apply();
+  });
+  const end = () => { if (drag && !drag.moved && H.background) H.background(); drag = null; svg.classList.remove('dragging'); };
+  svg.addEventListener('pointerup', end); svg.addEventListener('pointercancel', end);
+  return { draw, clear, fit, zoom, select, center, get count() { return nodes.length; } };
+})();
+
+// ------------------------------------------------------------------ chrome helpers
+function tb(html) { $('#toolbar').innerHTML = html; }
+function empty(msg) { Graph.clear(); tb(''); legend([]); const e = $('#empty'); e.textContent = msg; e.hidden = false; }
+function legend(items) {
+  $('#legend').innerHTML = items.filter(Boolean).map(([l, f, s, dash]) => `<span><span class="sw" style="background:${f};border-color:${s};${dash ? 'border-style:dashed' : ''}"></span>${esc(l)}</span>`).join('');
+  $('#legend').hidden = !items.filter(Boolean).length;
+}
+let panelQ = null;
+function panel(html, q) { panelQ = q || null; const p = $('#panel'); p.innerHTML = html; p.scrollTop = 0; }
+const badge = (t, c = '') => `<span class="badge ${c}">${esc(t)}</span>`;
+function fnList(items, emptyText) {
+  if (!items.length) return `<p class="empty-note">${esc(emptyText)}</p>`;
+  return `<ul class="lst">${items.map(i => `<li><a data-go="${esc(i.q)}" title="${esc(i.q)}">${esc(short(i.q))}</a><span class="muted">${esc(modOf(i.q))}${i.meta ? ' · ' + esc(i.meta) : ''}</span></li>`).join('')}</ul>`;
+}
+const KW = new Set('False None True and as assert async await break class continue def del elif else except finally for from global if import in is lambda nonlocal not or pass raise return try while with yield self cls match case'.split(' '));
+const TOK = /(#.*$)|("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')|\b([A-Za-z_]\w*)\b|(\b\d[\d_]*(?:\.\d+)?\b)/g;
+function hlLine(s, word) {
+  let out = '', last = 0, m; TOK.lastIndex = 0;
+  while ((m = TOK.exec(s))) {
+    out += esc(s.slice(last, m.index));
+    if (m[1]) out += `<span class="c">${esc(m[1])}</span>`;
+    else if (m[2]) out += `<span class="s">${esc(m[2])}</span>`;
+    else if (m[3]) out += m[3] === word ? `<mark>${m[3]}</mark>` : (KW.has(m[3]) ? `<span class="k">${m[3]}</span>` : m[3]);
+    else if (m[4]) out += `<span class="n">${m[4]}</span>`;
+    last = TOK.lastIndex;
+  }
+  return out + esc(s.slice(last));
+}
+function sourceBlock(file, a, b, hl = new Set(), word = null) {
+  if (!D.files[file]) return '<p class="empty-note">Source not embedded (built with --no-source).</p>';
+  const L = linesOf(file); b = Math.min(b, L.length, a + 400);
+  const wre = word && /^\w+$/.test(word) ? new RegExp('\\b' + word + '\\b') : null;
+  let h = '';
+  for (let i = a; i <= b; i++) {
+    const t = L[i - 1] || '';
+    const on = hl.has(i) || (wre && wre.test(t));
+    h += `<div class="ln${on ? ' hl' : ''}"><span class="no">${i}</span><span>${hlLine(t, word) || ' '}</span></div>`;
+  }
+  return `<pre class="code">${h}</pre>`;
+}
+function vscodeHref(file, line) {
+  const root = String(D.meta.root).replace(/\\/g, '/').replace(/\/$/, '');
+  const rootFile = /\.py$/i.test(root) ? root.replace(/\/[^/]*$/, '') : root;
+  return `vscode://file/${encodeURI(rootFile + '/' + file)}:${line}`;
+}
+
+// ------------------------------------------------------------------ panels
+function panelFor(q) {
+  const f = F[q];
+  if (!f) { if (C[q]) panelClass(q); return; }
+  const cs = callers[q] || [], ce = callees[q] || [], ex = externals[q] || [];
+  const sig = f.kind === 'module' ? '' :
+    `<pre class="sig">${f.decorators.map(d => '@' + esc(d) + '\n').join('')}${f.async ? 'async ' : ''}def ${esc(f.name)}(${esc(f.params.join(', '))})</pre>`;
+  panel(`
+    <div class="kicker">${esc(f.module)}${f.cls ? ' · class ' + esc(f.cls.split('.').pop()) : ''}</div>
+    <h2 class="mono">${esc(short(q))}</h2>
+    <div>${badge(f.kind)}${f.async ? badge('async') : ''}${f.entry ? badge(f.entry.label, 'entry') : ''}${badge('complexity ' + f.complexity, f.complexity > 10 ? 'warn' : '')}${badge(`${cs.length} callers · ${ce.length} callees`)}</div>
+    ${sig}
+    ${f.doc ? `<p class="doc">${esc(f.doc)}</p>` : ''}
+    <div class="actions">
+      <button class="b ${S.view === 'calls' && S.focus === q ? 'pri' : ''}" data-view-go="calls">Call graph</button>
+      <button class="b ${S.view === 'flow' && S.focus === q ? 'pri' : ''}" data-view-go="flow">Data flow</button>
+      ${Local.isAbs(D.meta.root) ? `<a class="b" href="${vscodeHref(f.file, f.line)}" title="Open in VS Code">Open in VS Code</a>` : ''}
+      <button class="b" id="copyLoc" title="Copy location">${esc(f.file)}:${f.line}</button>
+    </div>
+    <h4>Called by (${cs.length})</h4>${fnList(cs.map(c => ({ q: c.from, meta: 'L' + c.line })), f.entry ? 'Nothing in the project calls this — it is an entry point.' : 'Nothing in the project calls this (may be called dynamically).')}
+    <h4>Calls (${ce.length})</h4>${fnList(ce.map(c => ({ q: c.to, meta: 'L' + c.line })), 'No calls into project code.')}
+    ${ex.length ? `<h4>Library &amp; unresolved calls (${uniq(ex.map(c => c.text)).length})</h4><div class="chips">${uniq(ex.map(c => c.text)).map(t => `<span class="chip">${esc(t)}()</span>`).join('')}</div>` : ''}
+    <h4>Source</h4>${sourceBlock(f.file, f.line, f.kind === 'module' ? Math.min(f.end, 120) : f.end, new Set(f.calls.filter(c => c.resolved).map(c => c.line)))}
+  `, q);
+  const cp = $('#copyLoc');
+  if (cp) cp.onclick = () => { const t = `${f.file}:${f.line}`; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => { cp.textContent = 'Copied'; }, () => { cp.textContent = t; }); };
+}
+function panelClass(q) {
+  const c = C[q];
+  panel(`
+    <div class="kicker">${esc(c.module)} · class</div>
+    <h2 class="mono">${esc(q.split('.').pop())}</h2>
+    ${c.doc ? `<p class="doc">${esc(c.doc)}</p>` : ''}
+    <h4>Bases</h4>${c.bases_text.length ? `<div class="chips">${c.bases_text.map(b => { const r = c.bases.find(x => x.split('.').pop() === b.split('.').pop()); return r ? `<a class="chip lnk" data-go="${esc(r)}">${esc(b)}</a>` : `<span class="chip">${esc(b)}</span>`; }).join('')}</div>` : '<p class="empty-note">None</p>'}
+    <h4>Methods (${c.methods.length})</h4>${fnList(c.methods.map(m => ({ q: m, meta: 'L' + F[m].line })), 'No methods.')}
+    <h4>Source</h4>${sourceBlock(c.file, c.line, c.methods.length ? Math.max(...c.methods.map(m => F[m].end)) : c.line + 20)}
+  `, q);
+}
+function panelModule(m) {
+  const mm = M[m]; if (!mm) return;
+  const importedBy = Object.keys(M).filter(x => M[x].imports.includes(m));
+  const fs = fnsOf(m).filter(q => F[q].kind !== 'module');
+  const cl = Object.keys(C).filter(q => C[q].module === m);
+  panel(`
+    <div class="kicker">module</div><h2 class="mono">${esc(m)}</h2>
+    <div>${badge(mm.file)}${badge(mm.lines + ' lines')}${mm.pkg ? badge('package') : ''}</div>
+    <h4>Imports (${mm.imports.length})</h4>${mm.imports.length ? `<div class="chips">${mm.imports.map(x => `<a class="chip lnk" data-mod="${esc(x)}">${esc(x)}</a>`).join('')}</div>` : '<p class="empty-note">No project imports.</p>'}
+    <h4>Imported by (${importedBy.length})</h4>${importedBy.length ? `<div class="chips">${importedBy.map(x => `<a class="chip lnk" data-mod="${esc(x)}">${esc(x)}</a>`).join('')}</div>` : '<p class="empty-note">Nothing imports this module.</p>'}
+    ${cl.length ? `<h4>Classes (${cl.length})</h4>${fnList(cl.map(q => ({ q, meta: 'L' + C[q].line })), '')}` : ''}
+    <h4>Functions (${fs.length})</h4>${fnList(fs.map(q => ({ q, meta: 'L' + F[q].line })), 'No functions.')}
+  `);
+}
+function kindText(q, n) {
+  const c = n.cls.split(' ')[0];
+  return ({ param: `Parameter of ${short(q)}`, var: 'Local variable', attr: `Instance attribute — shared by every method of ${String(F[q].cls || '').split('.').pop()}`,
+    callin: 'Result of a call into project code', callext: 'Result of a library / builtin call', ret: `What ${short(q)} returns` })[c] || '';
+}
+function panelFlowNode(q, n) {
+  const f = F[q], g = gidOf(q, n.id);
+  const ins = (gIn.get(g) || []).length, outs = (gOut.get(g) || []).length;
+  const local = f.flows.filter(([s, t]) => s === n.id || t === n.id);
+  const lineHl = new Set();
+  if (n.id.startsWith('call:')) lineHl.add(+n.id.slice(n.id.lastIndexOf('@') + 1));
+  panel(`
+    <div class="kicker">${esc(short(q))} · data flow</div>
+    <h2 class="mono">${esc(n.label)}</h2>
+    <p class="muted">${esc(kindText(q, n))}</p>
+    <div class="actions">
+      <button class="b pri" data-trace="fwd">Where does it go? ▸</button>
+      <button class="b" data-trace="back">◂ Where does it come from?</button>
+    </div>
+    ${n.resolved && F[n.resolved] ? `<div class="actions"><button class="b" data-step="${esc(n.resolved)}">Step into ${esc(short(n.resolved))}</button></div>` : ''}
+    <p class="muted">Across the whole program: ${ins} incoming, ${outs} outgoing flow edges.</p>
+    <h4>In this function</h4>
+    ${local.length ? `<ul class="steps">${local.map(([s, t, l]) => `<li>${esc(localLabel(s))} <span class="muted">—${esc(l)}→</span> ${esc(localLabel(t))}</li>`).join('')}</ul>` : '<p class="empty-note">No local edges.</p>'}
+    <h4>Source · ${esc(f.file)}</h4>${sourceBlock(f.file, f.line, f.kind === 'module' ? Math.min(f.end, 120) : f.end, lineHl, n.id.startsWith('call:') ? null : localWord(n.id))}
+  `, q);
+  $$('[data-trace]').forEach(b => b.onclick = () => startTrace(g, b.dataset.trace));
+  const st = $('[data-step]'); if (st) st.onclick = () => { S.focus = st.dataset.step; S.sel = null; render(); };
+}
+function ownerShort(o) { return F[o] ? short(o) : (C[o] ? o.split('.').pop() : o); }
+function traceNodeClass(g) {
+  const { owner, local } = parseG(g), f = F[owner];
+  if (local === 'return') return 'ret';
+  if (local.startsWith('attr:')) return 'attr';
+  if (local.startsWith('var:')) return f && f.params.some(p => cleanParam(p) === local.slice(4)) ? 'param' : 'var';
+  const c = f && f.calls.find(x => `call:${x.text}@${x.line}` === local);
+  return c && c.resolved ? 'callin' : 'callext';
+}
+function panelTrace() {
+  const t = S.trace, groups = new Map();
+  t.order.forEach(g => { const { owner } = parseG(g); if (!groups.has(owner)) groups.set(owner, []); groups.get(owner).push(g); });
+  const st = parseG(t.start);
+  panel(`
+    <div class="kicker">value trace · ${t.dir === 'fwd' ? 'forward' : 'backward'}</div>
+    <h2 class="mono">${esc(localLabel(st.local))} <span class="muted">in ${esc(ownerShort(st.owner))}</span></h2>
+    <p>${t.dir === 'fwd' ? 'Everywhere this value can flow to' : 'Everything this value can come from'}: <b>${t.order.length - 1}</b> points across <b>${groups.size}</b> function${groups.size === 1 ? '' : 's'}.${t.truncated ? ' <span class="warn">(truncated at 300)</span>' : ''}</p>
+    <div class="actions"><button class="b" data-rev>${t.dir === 'fwd' ? '◂ Trace backward instead' : 'Trace forward instead ▸'}</button></div>
+    <h4>Journey by function</h4>
+    <ol class="journey">${[...groups].map(([o, gs]) => `<li><a class="lnk" data-flow="${esc(o)}">${esc(ownerShort(o))}</a> <span class="muted">${F[o] ? esc(F[o].file + ':' + F[o].line) : 'shared attribute'}</span>
+      <div class="chips">${gs.map(g => `<span class="chip ${traceNodeClass(g)}" data-sel="${esc(g)}">${esc(localLabel(parseG(g).local))}</span>`).join('')}</div></li>`).join('')}</ol>
+  `);
+  bindTracePanel();
+}
+function panelTracePoint(g) {
+  const t = S.trace, { owner, local } = parseG(g), f = F[owner];
+  const chain = []; let cur = g, guard = 0;
+  while (t.seen.get(cur) && t.seen.get(cur).via && guard++ < 400) { const e = t.seen.get(cur).via; chain.unshift(e); cur = t.dir === 'fwd' ? e[0] : e[1]; }
+  const fmt = x => { const p = parseG(x); return `${esc(localLabel(p.local))} <span class="muted">(${esc(ownerShort(p.owner))})</span>`; };
+  panel(`
+    <div class="actions"><button class="b" data-journey>← Journey</button></div>
+    <div class="kicker">${esc(ownerShort(owner))}</div>
+    <h2 class="mono">${esc(localLabel(local))}</h2>
+    <p class="muted">Step ${t.seen.get(g) ? t.seen.get(g).d : 0} of the trace.</p>
+    <div class="actions">
+      <button class="b" data-trace="fwd">Trace from here ▸</button>
+      <button class="b" data-trace="back">◂ Trace back from here</button>
+      ${f ? `<button class="b" data-flow="${esc(owner)}">Open data flow</button>` : ''}
+    </div>
+    <h4>How the value got here</h4>
+    ${chain.length ? `<ul class="steps"><li>${fmt(t.start)}</li>${chain.map(e => `<li><span class="muted">—${esc(e[2])} (${esc(e[3])})→</span> ${fmt(t.dir === 'fwd' ? e[1] : e[0])}</li>`).join('')}</ul>` : '<p class="empty-note">This is the starting point.</p>'}
+    ${f ? `<h4>Source</h4>${sourceBlock(f.file, f.line, f.kind === 'module' ? Math.min(f.end, 120) : f.end, local.startsWith('call:') ? new Set([+local.slice(local.lastIndexOf('@') + 1)]) : new Set(), local.startsWith('call:') ? null : localWord(local))}` : ''}
+  `);
+  $$('[data-trace]').forEach(b => b.onclick = () => startTrace(g, b.dataset.trace));
+  bindTracePanel();
+}
+function bindTracePanel() {
+  $$('#panel [data-sel]').forEach(c => c.onclick = () => { S.sel = c.dataset.sel; Graph.select(S.sel); Graph.center(S.sel); panelTracePoint(S.sel); });
+  $$('#panel [data-flow]').forEach(a => a.onclick = () => { S.focus = a.dataset.flow; S.sel = null; S.view = 'flow'; render(); });
+  const j = $('#panel [data-journey]'); if (j) j.onclick = () => { S.sel = null; Graph.select(null); panelTrace(); };
+  const r = $('#panel [data-rev]'); if (r) r.onclick = () => startTrace(S.trace.start, S.trace.dir === 'fwd' ? 'back' : 'fwd');
+}
+
+// ------------------------------------------------------------------ views
+function viewCalls() {
+  const f = S.focus;
+  if (!f) return empty(D.meta.landing ? (D.meta.message || 'Choose a folder to analyze.') : 'No Python functions found in this folder.');
+  const N = new Map(), E = [];
+  const add = (q, layer) => { if (N.has(q)) return false; N.set(q, { id: q, layer }); return true; };
+  add(f, 0);
+  let fr = [f];
+  for (let d = 1; d <= S.down && fr.length; d++) { const nx = []; fr.forEach(q => (callees[q] || []).forEach(c => { if (add(c.to, d)) nx.push(c.to); })); fr = nx; if (N.size > 400) break; }
+  fr = [f];
+  for (let d = 1; d <= S.up && fr.length; d++) { const nx = []; fr.forEach(q => (callers[q] || []).forEach(c => { if (add(c.from, -d)) nx.push(c.from); })); fr = nx; if (N.size > 500) break; }
+  const path = S.path || [], pathSet = new Set(path);
+  const off = path.length && path[0] !== f ? -(path.length - 1) : 0;
+  path.forEach((q, i) => add(q, i + off));
+  const ek = new Set();
+  for (const q of N.keys()) for (const c of (callees[q] || [])) {
+    if (!N.has(c.to) || ek.has(q + '>' + c.to)) continue;
+    ek.add(q + '>' + c.to);
+    const i = path.indexOf(q);
+    E.push({ s: q, t: c.to, label: 'L' + c.line, mark: i >= 0 && path[i + 1] === c.to });
+  }
+  if (S.ext) {
+    for (const [q, n] of [...N]) {
+      if (n.layer < 0 || n.ext) continue;
+      for (const t of uniq((externals[q] || []).map(c => c.text))) {
+        const id = 'ext:' + t;
+        if (!N.has(id)) N.set(id, { id, layer: n.layer + 1, ext: true, text: t });
+        E.push({ s: q, t: id, cls: 'ext' });
+      }
+    }
+  }
+  const nodes = [...N.values()].map(n => {
+    if (n.ext) return { id: n.id, layer: n.layer, label: n.text + '()', cls: 'ext', group: '~', title: 'library / unresolved: ' + n.text };
+    const m = modOf(n.id), fn = F[n.id];
+    return { id: n.id, layer: n.layer, label: short(n.id), sub: m + (fn && fn.entry ? ' · ' + fn.entry.label : ''), color: modColor(m),
+      cls: (fn ? 'fn' : 'klass') + (n.id === f ? ' focus' : ''), mark: pathSet.has(n.id) && n.id !== f, group: m, title: n.id };
+  });
+  tb(`
+    <div class="grp"><span class="lbl">Callers</span><button class="b sm" data-st="up:-1">&minus;</button><b>${S.up}</b><button class="b sm" data-st="up:1">+</button></div>
+    <div class="grp"><span class="lbl">Callees</span><button class="b sm" data-st="down:-1">&minus;</button><b>${S.down}</b><button class="b sm" data-st="down:1">+</button></div>
+    <label class="grp"><input type="checkbox" id="extT" ${S.ext ? 'checked' : ''}> Library calls</label>
+    <div class="grp"><input id="pathIn" list="fnlist" placeholder="Find call path to…" value="${esc(S.pathTarget)}" spellcheck="false"><button class="b" id="pathGo">Find</button>${S.path ? '<button class="b" id="pathClr">Clear</button>' : ''}</div>
+    ${S.pathMsg ? `<span class="grp note">${esc(S.pathMsg)}</span>` : ''}
+    ${N.size > 300 ? '<span class="grp warn">Large graph — lower the depth</span>' : ''}`);
+  $$('[data-st]').forEach(b => b.onclick = () => { const [k, d] = b.dataset.st.split(':'); S[k] = Math.max(0, Math.min(8, S[k] + Number(d))); render(); });
+  $('#extT').onchange = e => { S.ext = e.target.checked; render(); };
+  $('#pathGo').onclick = findPath;
+  $('#pathIn').onkeydown = e => { if (e.key === 'Enter') findPath(); };
+  if ($('#pathClr')) $('#pathClr').onclick = () => { S.path = null; S.pathMsg = ''; S.pathTarget = ''; render(); };
+  Graph.draw(nodes, E, {
+    edgeLabels: E.length <= 80, selected: S.sel && N.has(S.sel) ? S.sel : f,
+    click: n => { if (n.ext) return; S.sel = n.id; panelFor(n.id); },
+    dbl: n => { if (!n.ext && F[n.id]) { S.focus = n.id; S.sel = null; S.path = null; S.pathMsg = ''; render(); } },
+    background: () => { S.sel = null; Graph.select(f); panelFor(f); }
+  });
+  panelFor(S.sel && N.has(S.sel) ? S.sel : f);
+  legend([['focus', 'var(--accent-soft)', 'var(--accent)'], ['function', 'var(--node)', 'var(--node-line)'], ['class', 'var(--node)', 'var(--node-line)', 1],
+    S.path ? ['call path', 'var(--hl-soft)', 'var(--hl)'] : null, S.ext ? ['library call', 'var(--ext)', 'var(--node-line)', 1] : null, ['double-click to refocus', 'transparent', 'transparent']]);
+}
+function findPath() {
+  const raw = $('#pathIn').value.trim(); if (!raw) return;
+  S.pathTarget = raw;
+  const target = F[raw] ? raw : ALL.find(q => short(q) === raw || q.endsWith('.' + raw));
+  if (!target) { S.path = null; S.pathMsg = `No function named “${raw}”.`; return render(); }
+  const bfs = (a, b) => {
+    const prev = new Map([[a, null]]), q = [a];
+    while (q.length) { const u = q.shift(); if (u === b) { const out = []; for (let x = b; x !== null; x = prev.get(x)) out.unshift(x); return out; }
+      for (const c of callees[u] || []) if (!prev.has(c.to)) { prev.set(c.to, u); q.push(c.to); } }
+    return null;
+  };
+  let p = bfs(S.focus, target);
+  if (p) S.pathMsg = `${p.length - 1} hop${p.length === 2 ? '' : 's'}: ${p.map(short).join(' → ')}`;
+  else if ((p = bfs(target, S.focus))) S.pathMsg = `${short(target)} reaches ${short(S.focus)} in ${p.length - 1} hop${p.length === 2 ? '' : 's'}`;
+  else S.pathMsg = `No static call path between ${short(S.focus)} and ${short(target)}.`;
+  S.path = p; render();
+}
+function flowNode(q, id, params, callMap, rank) {
+  if (id === 'return') return { id, label: 'return', cls: 'ret', pill: true, rank };
+  const i = id.indexOf(':'), kind = id.slice(0, i), rest = id.slice(i + 1);
+  if (kind === 'var') {
+    if (params.has(rest)) return { id, label: rest, sub: 'parameter', cls: 'param', pill: true, rank };
+    if (rest.startsWith('self.')) return { id, label: rest, sub: 'attribute', cls: 'attr', rank };
+    return { id, label: rest, cls: 'var', rank };
+  }
+  const at = rest.lastIndexOf('@'), text = rest.slice(0, at), line = rest.slice(at + 1);
+  const c = callMap.get(id), res = c && c.resolved;
+  return { id, label: text + '()', sub: 'L' + line + (res ? ' · ' + short(res) : ''), cls: res ? 'callin' : 'callext', resolved: res, rank, color: res ? modColor(modOf(res)) : undefined, title: res ? 'double-click to step into ' + res : text };
+}
+function viewFlow() {
+  const q = S.focus, f = F[q];
+  if (!f) return empty('Pick a function to see its data flow.');
+  const callMap = new Map(f.calls.map(c => [`call:${c.text}@${c.line}`, c]));
+  const params = new Set(f.params.map(cleanParam));
+  const N = new Map(); let rank = 0;
+  const add = id => { if (!N.has(id)) N.set(id, flowNode(q, id, params, callMap, rank++)); };
+  [...params].filter(p => p !== 'self' && p !== 'cls').forEach(p => add('var:' + p));
+  f.calls.forEach(c => add(`call:${c.text}@${c.line}`));
+  const E = f.flows.map(([s, t, l]) => { add(s); add(t); return { s, t, label: l }; });
+  tb(`<span class="grp note"><b>${esc(short(q))}</b>&nbsp;· click a value to trace it across functions · double-click a yellow call to step into it</span>
+      <div class="grp"><button class="b" id="toCalls">Call graph</button>${(callers[q] || []).length ? `<button class="b" id="upFlow">↑ ${esc(short(callers[q][0].from))}</button>` : ''}</div>`);
+  $('#toCalls').onclick = () => { S.view = 'calls'; render(); };
+  if ($('#upFlow')) $('#upFlow').onclick = () => { S.focus = callers[q][0].from; S.sel = null; render(); };
+  if (!N.size) { empty(`${short(q)} has no data flow to show.`); panelFor(q); return; }
+  const sel = S.sel && N.has(S.sel) ? S.sel : null;
+  Graph.draw([...N.values()], E, {
+    edgeLabels: true, selected: sel,
+    click: n => { S.sel = n.id; panelFlowNode(q, n); },
+    dbl: n => { if (n.resolved && F[n.resolved]) { S.focus = n.resolved; S.sel = null; render(); } },
+    background: () => { S.sel = null; Graph.select(null); panelFor(q); }
+  });
+  if (sel) panelFlowNode(q, N.get(sel)); else panelFor(q);
+  legend([['parameter', 'var(--param)', 'var(--accent)'], ['variable', 'var(--node)', 'var(--node-line)'], ['self attribute', 'var(--node)', 'var(--kw)', 1],
+    ['project call', 'var(--callin)', 'var(--callin-line)'], ['library call', 'var(--ext)', 'var(--node-line)'], ['return', 'var(--ret)', 'var(--ret-line)']]);
+}
+function computeTrace(start, dir) {
+  const adjm = dir === 'fwd' ? gOut : gIn;
+  const seen = new Map([[start, { d: 0, via: null }]]), order = [start], q = [start];
+  let cut = false;
+  while (q.length && order.length < 300) {
+    const u = q.shift();
+    if (seen.get(u).d >= S.tdepth) { if ((adjm.get(u) || []).some(e => !seen.has(dir === 'fwd' ? e[1] : e[0]))) cut = true; continue; }
+    for (const e of adjm.get(u) || []) {
+      const v = dir === 'fwd' ? e[1] : e[0];
+      if (!seen.has(v)) { seen.set(v, { d: seen.get(u).d + 1, via: e }); order.push(v); q.push(v); }
+    }
+  }
+  S.trace = { start, dir, order, seen, truncated: q.length > 0, cut };
+}
+function startTrace(g, dir) { computeTrace(g, dir); S.view = 'trace'; S.sel = null; render(); }
+function viewTrace() {
+  const t = S.trace;
+  if (!t) return empty('Open a function’s Data flow view and click a value to trace where it goes.');
+  const set = new Set(t.order);
+  const nodes = t.order.map(g => {
+    const { owner, local } = parseG(g), m = modOf(owner), c = traceNodeClass(g);
+    return { id: g, label: localLabel(local), sub: ownerShort(owner) + (local.startsWith('call:') ? ' · L' + local.slice(local.lastIndexOf('@') + 1) : ''),
+      color: modColor(m), cls: c + (g === t.start ? ' focus' : ''), pill: c === 'param' || c === 'ret',
+      layer: (t.dir === 'fwd' ? 1 : -1) * t.seen.get(g).d, group: owner, title: g };
+  });
+  const E = D.gflows.filter(e => set.has(e[0]) && set.has(e[1])).map(e => ({ s: e[0], t: e[1], label: e[2], cls: e[3] }));
+  const st = parseG(t.start);
+  tb(`<span class="grp">Tracing <b class="mono">&nbsp;${esc(localLabel(st.local))}&nbsp;</b> in ${esc(ownerShort(st.owner))} · ${t.dir === 'fwd' ? 'forward' : 'backward'} · ${t.order.length - 1} steps</span>
+      <div class="grp"><span class="lbl">Depth</span><button class="b sm" data-td="-1">&minus;</button><b>${S.tdepth}</b><button class="b sm" data-td="1">+</button>${t.cut ? '<span class="note">more beyond</span>' : ''}</div>
+      <div class="grp"><button class="b" id="trRev">${t.dir === 'fwd' ? '◂ Backward' : 'Forward ▸'}</button>${F[st.owner] ? '<button class="b" id="trBack">Back to data flow</button>' : ''}</div>`);
+  $('#trRev').onclick = () => startTrace(t.start, t.dir === 'fwd' ? 'back' : 'fwd');
+  $$('[data-td]').forEach(b => b.onclick = () => { S.tdepth = Math.max(1, Math.min(40, S.tdepth + Number(b.dataset.td))); computeTrace(t.start, t.dir); S.sel = null; render(false); });
+  if ($('#trBack')) $('#trBack').onclick = () => { S.focus = st.owner; S.view = 'flow'; S.sel = st.local; render(); };
+  Graph.draw(nodes, E, {
+    edgeLabels: E.length <= 90, selected: S.sel,
+    click: n => { S.sel = n.id; panelTracePoint(n.id); },
+    dbl: n => { const o = parseG(n.id).owner; if (F[o]) { S.focus = o; S.view = 'flow'; S.sel = parseG(n.id).local; render(); } },
+    background: () => { S.sel = null; Graph.select(null); panelTrace(); }
+  });
+  if (S.sel && set.has(S.sel)) panelTracePoint(S.sel); else panelTrace();
+  legend([['start', 'var(--accent-soft)', 'var(--accent)'], ['─ inside a function', 'transparent', 'var(--edge)'], ['┄ passed as argument', 'transparent', 'var(--edge)', 1], ['· returned to caller', 'transparent', 'var(--edge)', 1], ['double-click: open data flow', 'transparent', 'transparent']]);
+}
+function viewModules() {
+  const names = Object.keys(M).sort();
+  if (!names.length) return empty('No modules.');
+  const cnt = {}; for (const q of ALL) if (F[q].kind !== 'module') cnt[F[q].module] = (cnt[F[q].module] || 0) + 1;
+  const cur = S.focus && F[S.focus] ? F[S.focus].module : null;
+  const nodes = names.map(m => ({ id: 'mod:' + m, m, label: m, sub: `${cnt[m] || 0} functions · ${M[m].lines} lines`, color: modColor(m), cls: 'fn' + (m === cur ? ' focus' : ''), title: M[m].file }));
+  const E = []; names.forEach(m => M[m].imports.forEach(t => { if (M[t]) E.push({ s: 'mod:' + m, t: 'mod:' + t }); }));
+  tb(`<span class="grp note">Arrows point from a module to what it imports · click to inspect · double-click to open its call graph</span>`);
+  Graph.draw(nodes, E, {
+    click: n => panelModule(n.m),
+    dbl: n => { const fs = fnsOf(n.m).filter(q => F[q].kind !== 'module'); const first = fs[0] || fnsOf(n.m)[0]; if (first) { S.focus = first; S.view = 'calls'; render(); } },
+    background: () => {}
+  });
+  panelModule(cur || names[0]);
+  legend([['module', 'var(--node)', 'var(--node-line)'], ['current function’s module', 'var(--accent-soft)', 'var(--accent)']]);
+}
+
+// ------------------------------------------------------------------ sidebar
+function buildSide() {
+  const kinds = [['route', 'HTTP routes'], ['main', 'Scripts & main()'], ['cli', 'CLI commands'], ['task', 'Background tasks'], ['test', 'Tests']];
+  let h = '';
+  for (const [k, title] of kinds) {
+    const qs = entries.filter(q => F[q].entry.kind === k); if (!qs.length) continue;
+    const rows = qs.slice(0, 300).map(q => `<a class="item fnitem" data-go="${esc(q)}" data-q="${esc(q)}" title="${esc(q)}"><span class="nm">${esc(k === 'test' ? short(q) : F[q].entry.label)}</span><span class="muted">${esc(k === 'test' ? F[q].module : short(q))}</span></a>`).join('');
+    h += k === 'test' ? `<details><summary>${title} (${qs.length})</summary>${rows}</details>` : `<div class="subh">${title}</div>${rows}`;
+  }
+  $('#entries').innerHTML = h || '<p class="empty-note">No entry points detected.</p>';
+
+  const real = ALL.filter(q => F[q].kind !== 'module');
+  const hot = real.filter(q => (callers[q] || []).length > 1).sort((a, b) => callers[b].length - callers[a].length).slice(0, 5);
+  const cx = real.filter(q => F[q].complexity > 3).sort((a, b) => F[b].complexity - F[a].complexity).slice(0, 5);
+  const orphan = real.filter(q => !(callers[q] || []).length && !F[q].entry && !F[q].name.startsWith('__'));
+  const row = (q, meta) => `<a class="item fnitem" data-go="${esc(q)}" data-q="${esc(q)}" title="${esc(q)}"><span class="nm">${esc(short(q))}</span><span class="muted">${esc(meta)}</span></a>`;
+  $('#insights').innerHTML =
+    (hot.length ? `<div class="subh">Most called</div>${hot.map(q => row(q, callers[q].length + ' callers')).join('')}` : '') +
+    (cx.length ? `<div class="subh">Most complex</div>${cx.map(q => row(q, 'cx ' + F[q].complexity)).join('')}` : '') +
+    (orphan.length ? `<details><summary>Never called statically (${orphan.length})</summary>${orphan.slice(0, 200).map(q => row(q, F[q].module)).join('')}</details>` : '') +
+    (D.errors.length ? `<details><summary class="warn">Parse errors (${D.errors.length})</summary>${D.errors.map(e => `<div class="subh">${esc(e)}</div>`).join('')}</details>` : '') || '<p class="empty-note">Nothing notable.</p>';
+
+  const mods = Object.keys(M).sort();
+  $('#tree').innerHTML = mods.map(m => {
+    const fs = fnsOf(m);
+    return `<details class="mod" data-mod-tree="${esc(m)}" ${mods.length <= 12 ? 'open' : ''}><summary><span class="dot" style="background:${modColor(m)}"></span>${esc(m)} <span class="muted">${fs.length}</span></summary>${fs.map(q => `<a class="item fnitem" data-go="${esc(q)}" data-q="${esc(q)}" title="${esc(q)}"><span class="nm">${esc(short(q))}</span><span class="muted">L${F[q].line}</span></a>`).join('')}</details>`;
+  }).join('');
+  $('#fnlist').innerHTML = ALL.map(q => `<option value="${esc(q)}">`).join('');
+}
+$('#filter').addEventListener('input', e => {
+  const s = e.target.value.trim().toLowerCase();
+  $$('#tree details.mod').forEach(d => {
+    let any = !s || d.dataset.modTree.toLowerCase().includes(s);
+    $$('.fnitem', d).forEach(a => { const hit = !s || a.dataset.q.toLowerCase().includes(s); a.hidden = !hit && !(s && d.dataset.modTree.toLowerCase().includes(s)); if (hit) any = true; });
+    d.hidden = !any; if (s && any) d.open = true;
+  });
+});
+function highlightSide() { $$('.fnitem').forEach(a => a.classList.toggle('on', a.dataset.q === S.focus)); }
+
+// ------------------------------------------------------------------ navigation
+function go(q, view) {
+  if (C[q] && !F[q]) { panelClass(q); return; }
+  if (!F[q]) return;
+  S.focus = q; S.sel = null; S.path = null; S.pathMsg = ''; S.pathTarget = '';
+  if (view) S.view = view; else if (S.view === 'trace' || S.view === 'modules') S.view = 'calls';
+  render();
+}
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-go]'); if (a) { e.preventDefault(); go(a.dataset.go); return; }
+  const m = e.target.closest('[data-mod]'); if (m) { e.preventDefault(); panelModule(m.dataset.mod); return; }
+  const v = e.target.closest('[data-view-go]'); if (v && panelQ) { S.focus = panelQ; S.sel = null; S.view = v.dataset.viewGo; render(); }
+});
+$$('#tabs button').forEach(b => b.onclick = () => { S.view = b.dataset.view; if (S.view !== 'trace') S.sel = null; render(); });
+function rotate() { S.orient[S.view] = S.orient[S.view] === 'TB' ? 'LR' : 'TB'; render(false); }
+$$('#zoomctl [data-z]').forEach(b => b.onclick = () => { const z = b.dataset.z; if (z === 'fit') Graph.fit(); else if (z === 'rot') rotate(); else Graph.zoom(z === 'in' ? 1.25 : 0.8); });
+
+function hashString() {
+  const p = new URLSearchParams(); p.set('v', S.view);
+  if (S.focus) p.set('fn', S.focus);
+  if (S.view === 'trace' && S.trace) { p.set('t', S.trace.start); p.set('d', S.trace.dir); }
+  return '#' + p.toString();
+}
+function readHash() {
+  const p = new URLSearchParams(location.hash.slice(1));
+  const fn = p.get('fn'); if (fn && F[fn]) S.focus = fn;
+  const v = p.get('v'); if (['calls', 'flow', 'trace', 'modules'].includes(v)) S.view = v;
+  if (S.view === 'trace') { const t = p.get('t'); if (t) computeTrace(t, p.get('d') === 'back' ? 'back' : 'fwd'); else if (!S.trace) S.view = 'flow'; }
+}
+window.addEventListener('popstate', () => { readHash(); render(false); });
+function render(push = true) {
+  $$('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.view === S.view));
+  ({ calls: viewCalls, flow: viewFlow, trace: viewTrace, modules: viewModules })[S.view]();
+  highlightSide();
+  const h = hashString();
+  try { if (push && location.hash !== h) history.pushState(null, '', h); else if (!push) history.replaceState(null, '', h); } catch (_) { /* file:// in some browsers */ }
+}
+
+// ------------------------------------------------------------------ search + keys
+const qIn = $('#q'), res = $('#results'); let hits = [], hi = 0;
+function drawRes() {
+  res.hidden = !hits.length;
+  res.innerHTML = hits.map((q, i) => `<div class="res ${i === hi ? 'on' : ''}" data-i="${i}"><span class="mono">${esc(short(q))}</span><span class="muted">${esc(F[q].module)}</span></div>`).join('');
+}
+qIn.addEventListener('input', () => {
+  const s = qIn.value.trim().toLowerCase(); if (!s) { hits = []; drawRes(); return; }
+  hits = ALL.map(q => { const sh = short(q).toLowerCase(), n = F[q].name.toLowerCase();
+    const sc = (sh === s || n === s) ? 0 : (sh.startsWith(s) || n.startsWith(s)) ? 1 : sh.includes(s) ? 2 : q.toLowerCase().includes(s) ? 3 : 9; return [sc, q]; })
+    .filter(x => x[0] < 9).sort((a, b) => a[0] - b[0] || a[1].length - b[1].length).slice(0, 30).map(x => x[1]);
+  hi = 0; drawRes();
+});
+res.addEventListener('mousedown', e => { const r = e.target.closest('.res'); if (r) { e.preventDefault(); pick(hits[+r.dataset.i]); } });
+qIn.addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown') { hi = Math.min(hi + 1, hits.length - 1); drawRes(); e.preventDefault(); }
+  else if (e.key === 'ArrowUp') { hi = Math.max(hi - 1, 0); drawRes(); e.preventDefault(); }
+  else if (e.key === 'Enter' && hits[hi]) pick(hits[hi]);
+  else if (e.key === 'Escape') { res.hidden = true; qIn.blur(); }
+});
+qIn.addEventListener('blur', () => setTimeout(() => { res.hidden = true; }, 120));
+function pick(q) { res.hidden = true; qIn.value = ''; hits = []; qIn.blur(); go(q); }
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && Picker.isOpen) { Picker.close(); return; }
+  if (Picker.isOpen) return;
+  if ((e.key === 'o' || e.key === 'O') && !/INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '')) { Picker.open(); return; }
+  if (/INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '') || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === '/') { e.preventDefault(); qIn.focus(); }
+  else if (e.key === 'f' || e.key === 'F') Graph.fit();
+  else if (e.key === 'r' || e.key === 'R') rotate();
+  else if (e.key === '+' || e.key === '=') Graph.zoom(1.25);
+  else if (e.key === '-') Graph.zoom(0.8);
+  else if (['1', '2', '3', '4'].includes(e.key)) { S.view = ['calls', 'flow', 'trace', 'modules'][+e.key - 1]; render(); }
+  else if (e.key === 'Escape') { S.path = null; S.pathMsg = ''; S.sel = null; render(); }
+});
+let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => Graph.fit(), 150); });
+
+// ------------------------------------------------------------------ folder picker
+const Picker = (() => {
+  const box = $('#picker'), KEY = 'codeflow.recent';
+  let cur = null, data = null, seq = 0;
+  const recent = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (_) { return []; } };
+  const remember = p => { try { localStorage.setItem(KEY, JSON.stringify([p, ...recent().filter(x => x !== p)].slice(0, 8))); } catch (_) {} };
+  if (D.meta.served && D.meta.name) remember(D.meta.root);
+  const baseName = p => String(p).replace(/[\\/]+$/, '').split(/[\\/]/).pop() || p;
+  function analyze(path) {
+    if (!path) return;
+    remember(path);
+    const ex = $('#pkEx').value.split(',').map(s => s.trim()).filter(Boolean).join(',');
+    $('#pkOpen').textContent = 'Analyzing…'; $('#pkOpen').disabled = true;
+    location.href = '/?path=' + encodeURIComponent(path) + (ex ? '&exclude=' + encodeURIComponent(ex) : '');
+  }
+  async function load(path) {
+    const my = ++seq;
+    $('#pkList').innerHTML = '<p class="empty-note" style="padding:12px 16px">Reading folder…</p>';
+    try {
+      const r = await fetch('/api/ls?path=' + encodeURIComponent(path || ''));
+      const j = await r.json();
+      if (my !== seq) return;
+      if (j.error) throw new Error(j.error);
+      data = j; cur = j.path; draw();
+    } catch (e) {
+      if (my !== seq) return;
+      $('#pkList').innerHTML = `<p class="warn" style="padding:12px 16px">${esc(e.message)}</p>`;
+      $('#pkPath').value = path || '';
+    }
+  }
+  function verdict(d) {
+    const n = d.py_total + (d.py_capped ? '+' : '');
+    if (!d.py_total) return `<b>No Python files here.</b> <span class="muted">Open one of the folders below.</span>`;
+    const proj = d.marks.some(m => ['pyproject', 'setup.py', 'setup.cfg', 'requirements', 'uv', 'poetry', 'pipenv', 'django'].includes(m));
+    return `<b>${n} Python file${d.py_total === 1 ? '' : 's'}</b> ${proj ? '· looks like a Python project' : d.marks.includes('package') ? '· Python package' : ''}
+      <div class="chips">${d.marks.map(m => `<span class="chip">${esc(m)}</span>`).join('')}</div>`;
+  }
+  function draw() {
+    const d = data;
+    $('#pkPath').value = d.path;
+    const rec = recent().filter(p => p !== d.path);
+    $('#pkQuick').innerHTML =
+      d.drives.map(x => `<span class="chip" data-pk="${esc(x)}">${esc(x)}</span>`).join('') +
+      `<span class="chip" data-pk="${esc(d.home)}">Home</span><span class="chip" data-pk="${esc(d.cwd)}" title="${esc(d.cwd)}">Current dir</span>` +
+      (rec.length ? `<span class="lbl">Recent</span>` + rec.map(p => `<span class="chip" data-pk="${esc(p)}" title="${esc(p)}">${esc(baseName(p))}</span>`).join('') : '');
+    $('#pkHere').innerHTML = verdict(d);
+    const showHidden = $('#pkHidden').checked;
+    const rows = d.dirs.filter(x => showHidden || !x.hidden);
+    $('#pkList').innerHTML = rows.length ? rows.map(x => `
+      <div class="pk-row ${x.skipped || x.denied ? 'dim' : ''}" data-pk="${esc(x.path)}" title="${esc(x.path)}">
+        <span class="nm">${esc(x.name)}</span>
+        ${x.skipped ? '<span class="badge">skipped by analyzer</span>' : ''}
+        ${x.denied ? '<span class="badge">no access</span>' : ''}
+        ${x.marks.map(m => `<span class="badge ${['pyproject', 'git', 'package'].includes(m) ? 'entry' : ''}">${esc(m)}</span>`).join('')}
+        ${x.py ? `<span class="badge">${x.py} .py</span>` : ''}
+        ${x.skipped || x.denied ? '' : `<button class="b sm go" data-an="${esc(x.path)}">Analyze</button>`}
+      </div>`).join('') : '<p class="empty-note" style="padding:12px 16px">No sub-folders.</p>';
+    $('#pkUp').disabled = !d.parent;
+  }
+  function open() {
+    box.hidden = false;
+    if (!D.meta.served) { Local.show(); return; }
+    const root = D.meta.root || '';
+    const start = D.meta.landing ? root : root.replace(/[\\/][^\\/]*[\\/]?$/, '') || root;
+    $('#pkEx').value = (D.meta.exclude || []).join(', ');
+    load(start);
+    setTimeout(() => $('#pkPath').focus(), 30);
+  }
+  function close() { if (D.meta.landing) return; box.hidden = true; }
+  box.addEventListener('click', e => {
+    if (e.target === box) return close();
+    const an = e.target.closest('[data-an]'); if (an) { e.stopPropagation(); return analyze(an.dataset.an); }
+    const pk = e.target.closest('[data-pk]'); if (pk) load(pk.dataset.pk);
+  });
+  box.addEventListener('dblclick', e => { const r = e.target.closest('.pk-row[data-pk]'); if (r && !r.classList.contains('dim')) analyze(r.dataset.pk); });
+  $('#pkClose').onclick = close;
+  $('#pkGo').onclick = () => load($('#pkPath').value.trim());
+  $('#pkPath').addEventListener('keydown', e => { if (e.key === 'Enter') load($('#pkPath').value.trim()); });
+  $('#pkUp').onclick = () => data && data.parent && load(data.parent);
+  $('#pkHidden').onchange = () => data && draw();
+  $('#pkOpen').onclick = () => analyze(cur || $('#pkPath').value.trim());
+  $('#pkNative').onclick = async () => {
+    const b = $('#pkNative'); b.disabled = true; b.textContent = 'Waiting for dialog…';
+    try { const j = await (await fetch('/api/pick?path=' + encodeURIComponent(cur || ''))).json();
+      if (j.path) analyze(j.path); else if (j.error) $('#pkHere').innerHTML = `<span class="warn">${esc(j.error)}</span>`; }
+    catch (e) { $('#pkHere').innerHTML = `<span class="warn">${esc(e.message)}</span>`; }
+    finally { b.disabled = false; b.innerHTML = 'Browse&hellip;'; }
+  };
+  $('#openBtn').onclick = open;
+  return { open, close, get isOpen() { return !box.hidden; } };
+})();
+
+// ------------------------------------------------------------------ static mode: open a folder without the server
+// Two ways in: (1) pick a folder -> the browser reads the .py files and runs the same Python analyzer
+// in-page (Pyodide / WebAssembly); nothing is uploaded. (2) type a path -> hand off to the local app.
+const Local = (() => {
+  const PYODIDE = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/';
+  const SKIP = new Set(D.meta.skip_dirs || ['.git', '.venv', 'venv', '__pycache__', 'node_modules', 'site-packages']);
+  const PATH_KEY = 'codeflow.lastPath', APP_PORT = 8347;
+  let py = null;
+  const status = (msg, cls = '') => { const s = $('#lcStatus'); if (s) { s.className = 'lc-status ' + cls; s.innerHTML = msg; } };
+  const isAbs = p => /^([A-Za-z]:[\\/]|\/|\\\\)/.test(p || '');
+  const lastPath = () => { try { return localStorage.getItem(PATH_KEY) || ''; } catch (_) { return ''; } };
+  function show() {
+    $('#pkBody').innerHTML = `
+      <div class="lc">
+        <section>
+          <h4>Folder path</h4>
+          <div class="pk-bar" style="padding:0">
+            <input id="lcPath" spellcheck="false" placeholder="e.g. D:\\Project\\RangeBreak" value="${esc(lastPath())}">
+            <button class="b" id="lcGo" title="Open this path in the local codeflow app">Open path</button>
+          </div>
+          <p class="muted">Paste any path. If the local app is running it opens directly; otherwise pick the same folder below and the path is used for “Open in VS Code” links.</p>
+        </section>
+        <section>
+          <h4>Or choose the folder</h4>
+          <div class="actions" style="margin:0 0 6px">
+            <button class="b pri" id="lcChoose">Choose folder…</button>
+            <input type="file" id="lcInput" webkitdirectory multiple hidden>
+          </div>
+          <p class="muted">Your browser reads the <span class="mono">.py</span> files and analyzes them on this page — nothing is uploaded.
+            The first time, it downloads the Python runtime (~10&nbsp;MB, then cached).</p>
+        </section>
+        <label class="pk-ex">Skip folders <input id="lcEx" placeholder="e.g. tests, migrations" spellcheck="false"></label>
+        <div id="lcStatus" class="lc-status"></div>
+      </div>`;
+    $('#lcEx').value = (D.meta.exclude || []).join(', ');
+    $('#lcGo').onclick = openPath;
+    $('#lcPath').addEventListener('keydown', e => { if (e.key === 'Enter') openPath(); });
+    $('#lcChoose').onclick = choose;
+    $('#lcInput').onchange = e => fromInput(e.target.files);
+    setTimeout(() => $('#lcPath').focus(), 30);
+  }
+  const excludes = () => $('#lcEx').value.split(',').map(s => s.trim()).filter(Boolean);
+  const savePath = p => { try { localStorage.setItem(PATH_KEY, p); } catch (_) {} };
+  async function openPath() {
+    const p = $('#lcPath').value.trim().replace(/^"(.*)"$/, '$1');
+    if (!p) return status('Type a folder path first.', 'warn');
+    if (!isAbs(p)) return status('Use a full path such as <span class="mono">D:\\Project\\RangeBreak</span>.', 'warn');
+    savePath(p);
+    const ex = excludes().join(',');
+    const query = '/?path=' + encodeURIComponent(p) + (ex ? '&exclude=' + encodeURIComponent(ex) : '');
+    status('Looking for the local codeflow app…');
+    // image probe: needs no CORS, so it works from a file:// page; other apps on these ports fail the probe
+    const probe = port => new Promise(ok => {
+      const img = new Image(), t = setTimeout(() => ok(null), 2500);
+      img.onload = () => { clearTimeout(t); ok(port); };
+      img.onerror = () => { clearTimeout(t); ok(null); };
+      img.src = `http://127.0.0.1:${port}/api/ping.gif?${Date.now()}`;
+    });
+    const found = (await Promise.all([0, 1, 2, 3, 4].map(i => probe(APP_PORT + i)))).find(Boolean);
+    const url = `http://127.0.0.1:${found || APP_PORT}${query}`;
+    if (found) { status('Opening in the local app…'); location.href = url; return; }
+    status(`Couldn't find the local codeflow app, and a web page can't read <span class="mono">${esc(p)}</span> on its own.<br>
+      • Click <b>Choose folder…</b> and select that folder (the path above is kept for “Open in VS Code” links), or<br>
+      • start the app — double-click <span class="mono">codeflow.bat</span> in the codeflow folder — then <a class="lnk" href="${esc(url)}">open this path in the app</a>.`, 'warn');
+  }
+  async function choose() {
+    if (window.showDirectoryPicker) {
+      let dir;
+      try { dir = await window.showDirectoryPicker({ id: 'codeflow', mode: 'read' }); }
+      catch (e) { if (e && e.name === 'AbortError') return; return $('#lcInput').click(); }
+      try {
+        const files = [], ex = new Set(excludes());
+        await walk(dir, '', files, ex);
+        return run(dir.name, files);
+      } catch (e) { return status('Could not read the folder: ' + esc(e.message || e), 'warn'); }
+    }
+    $('#lcInput').click();                                  // Firefox / older browsers
+  }
+  async function walk(dir, prefix, out, ex) {
+    for await (const [name, h] of dir.entries()) {
+      if (h.kind === 'directory') {
+        if (SKIP.has(name) || ex.has(name) || name.startsWith('.')) continue;
+        await walk(h, prefix + name + '/', out, ex);
+      } else if (name.endsWith('.py')) {
+        const f = await h.getFile();
+        if (f.size < 2e6) out.push([prefix + name, await f.text()]);
+        if (out.length % 25 === 0) status(`Reading… ${out.length} Python files`);
+      }
+    }
+  }
+  async function fromInput(list) {
+    const ex = new Set(excludes()), files = [];
+    let root = '';
+    for (const f of list) {
+      const parts = (f.webkitRelativePath || f.name).split('/');
+      root = root || parts[0];
+      if (!parts[parts.length - 1].endsWith('.py') || f.size >= 2e6) continue;
+      if (parts.slice(1, -1).some(p => SKIP.has(p) || ex.has(p) || p.startsWith('.'))) continue;
+      files.push([parts.slice(1).join('/'), await f.text()]);
+    }
+    return run(root || 'project', files);
+  }
+  function loadScript(src) {
+    return new Promise((ok, bad) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => bad(new Error('could not download ' + src)); document.head.appendChild(s); });
+  }
+  async function runtime() {
+    if (py) return py;
+    status('Loading Python in the browser… (first time only, ~10 MB)');
+    if (!window.loadPyodide) await loadScript(PYODIDE + 'pyodide.js');
+    py = await window.loadPyodide({ indexURL: PYODIDE });
+    return py;
+  }
+  async function run(rootName, files) {
+    if (!files.length) return status(`No Python files found in <span class="mono">${esc(rootName)}</span> (after skipping ${[...SKIP].slice(0, 4).join(', ')}…).`, 'warn');
+    $('#lcChoose').disabled = true;
+    try {
+      const p = await runtime();
+      status(`Analyzing ${files.length} Python files from <span class="mono">${esc(rootName)}</span>…`);
+      const safe = rootName.replace(/[^\w.\- ]/g, '_') || 'project';
+      p.runPython("import shutil; shutil.rmtree('/work', ignore_errors=True)");
+      for (const [rel, text] of files) {
+        const full = `/work/${safe}/${rel}`;
+        p.FS.mkdirTree(full.slice(0, full.lastIndexOf('/')));
+        p.FS.writeFile(full, text);
+      }
+      p.FS.mkdirTree('/cf');
+      p.FS.writeFile('/cf/cf_analyzer.py', JSON.parse(document.getElementById('cf-analyzer').textContent));
+      const typed = ($('#lcPath').value || '').trim();
+      p.globals.set('CF_ROOT', `/work/${safe}`);
+      p.globals.set('CF_EXCLUDE', excludes().join(','));
+      p.globals.set('CF_DISPLAY', isAbs(typed) && typed.replace(/[\\/]+$/, '').split(/[\\/]/).pop() === rootName ? typed : rootName);
+      const out = p.runPython(`
+import sys, json, importlib
+sys.path.insert(0, '/cf')
+import cf_analyzer
+importlib.reload(cf_analyzer)
+_p = cf_analyzer.Project(CF_ROOT, exclude=[x for x in CF_EXCLUDE.split(',') if x])
+_d = _p.to_json()
+_d['meta']['root'] = CF_DISPLAY
+_d['meta']['browser'] = True
+json.dumps(_d)`);
+      relaunch(JSON.parse(out));
+    } catch (e) {
+      status('Analysis failed: ' + esc(e.message || e) + '<br>If you are offline, use the local app instead (<span class="mono">codeflow.bat</span>).', 'warn');
+      $('#lcChoose').disabled = false;
+    }
+  }
+  function relaunch(data) {
+    const TAG = '<script id="cf-data" type="application/json">';
+    const a = PRISTINE.indexOf(TAG), b = PRISTINE.indexOf('<\/script>', a);
+    const json = JSON.stringify(data).replace(/<\//g, '<\\/');
+    const html = PRISTINE.slice(0, a + TAG.length) + json + PRISTINE.slice(b);
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (_) {}
+    document.open(); document.write(html); document.close();
+  }
+  return { show, run, isAbs };
+})();
+window.__codeflowLocal = Local;       // used by tests
+
+// ------------------------------------------------------------------ detected stack
+const FRAMEWORKS = { fastapi: 'FastAPI', flask: 'Flask', django: 'Django', starlette: 'Starlette', celery: 'Celery', click: 'Click',
+  typer: 'Typer', pytest: 'pytest', pandas: 'pandas', numpy: 'NumPy', polars: 'Polars', sqlalchemy: 'SQLAlchemy', pydantic: 'Pydantic',
+  requests: 'requests', httpx: 'httpx', aiohttp: 'aiohttp', uvicorn: 'Uvicorn', streamlit: 'Streamlit', langchain: 'LangChain',
+  langgraph: 'LangGraph', openai: 'OpenAI', anthropic: 'Anthropic', torch: 'PyTorch', tensorflow: 'TensorFlow', sklearn: 'scikit-learn',
+  boto3: 'AWS boto3', pyarrow: 'PyArrow', kiteconnect: 'Kite Connect', yfinance: 'yfinance', matplotlib: 'Matplotlib', plotly: 'Plotly' };
+function buildDetected() {
+  const libs = D.meta.libraries || {}, names = Object.keys(libs);
+  const kinds = {}; entries.forEach(q => { const k = F[q].entry.kind; kinds[k] = (kinds[k] || 0) + 1; });
+  const label = { route: 'route', main: 'script', cli: 'CLI command', task: 'task', test: 'test' };
+  const summary = Object.entries(kinds).map(([k, n]) => `${n} ${label[k] || k}${n === 1 ? '' : 's'}`).join(' · ');
+  const fw = names.filter(n => FRAMEWORKS[n]), other = names.filter(n => !FRAMEWORKS[n]);
+  $('#detected').innerHTML = !ALL.length ? '<p class="empty-note">Open a folder to start.</p>' :
+    `${summary ? `<div class="subh">${esc(summary)}</div>` : ''}
+     ${names.length ? `<div class="chips">${fw.map(n => `<span class="chip lib fw" data-lib="${esc(n)}" title="used in ${libs[n].length} module(s)">${esc(FRAMEWORKS[n])}</span>`).join('')}${other.map(n => `<span class="chip lib" data-lib="${esc(n)}" title="used in ${libs[n].length} module(s)">${esc(n)}</span>`).join('')}</div>` : '<p class="empty-note">No third-party imports.</p>'}`;
+  $$('#detected [data-lib]').forEach(c => c.onclick = () => panelLibrary(c.dataset.lib));
+}
+function panelLibrary(name) {
+  const mods = (D.meta.libraries || {})[name] || [];
+  const alias = new RegExp('^' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(\\.|$)');
+  const users = ALL.filter(q => (externals[q] || []).some(c => alias.test(c.text))).slice(0, 60);
+  panel(`<div class="kicker">third-party package</div><h2 class="mono">${esc(FRAMEWORKS[name] || name)}</h2>
+    <p class="muted">Imported by ${mods.length} module${mods.length === 1 ? '' : 's'}.</p>
+    <div class="chips">${mods.map(m => `<a class="chip lnk" data-mod="${esc(m)}">${esc(m)}</a>`).join('')}</div>
+    <h4>Functions calling <span class="mono">${esc(name)}.*</span> directly (${users.length})</h4>
+    ${fnList(users.map(q => ({ q, meta: uniq(externals[q].filter(c => alias.test(c.text)).map(c => c.text)).slice(0, 3).join(', ') })), 'None found (it may be used through an alias such as pd / np).')}`);
+}
+
+// ------------------------------------------------------------------ boot
+const st = D.meta.stats;
+$('#proj').textContent = D.meta.name || 'Open folder';
+$('#openBtn').title = (D.meta.root ? D.meta.root + '\n' : '') + 'Open another folder (O)';
+buildDetected();
+$('#stats').textContent = `${st.modules} modules · ${st.functions} functions · ${st.classes} classes · ${st.internal_calls} project calls · ${st.lines.toLocaleString()} lines · ${st.elapsed_ms} ms`;
+$('#stats').title = `${D.meta.root}\ngenerated ${D.meta.generated} · codeflow ${D.meta.version}`;
+document.title = D.meta.name ? `codeflow · ${D.meta.name}` : 'codeflow · open a folder';
+if (D.meta.landing) $('#stats').textContent = 'no folder open';
+buildSide();
+// default focus: the non-test entry point that reaches the most code
+function reach(q) { const seen = new Set([q]), st = [q]; while (st.length && seen.size < 2000) for (const c of callees[st.pop()] || []) if (!seen.has(c.to)) { seen.add(c.to); st.push(c.to); } return seen.size; }
+const starts = entries.filter(q => F[q].entry.kind !== 'test');
+S.focus = (starts.length ? starts : ALL).map(q => [reach(q), q]).sort((a, b) => b[0] - a[0] || a[1].localeCompare(b[1]))
+  .map(x => x[1])[0] || null;
+readHash();
+render(false);
+if (D.meta.landing) {
+  panel(`<div class="kicker">welcome</div><h2>Pick a project folder</h2>
+    <p>codeflow reads every <span class="mono">.py</span> file in the folder (without running anything) and shows how functions call each other and how values move between them.</p>
+    ${D.meta.message ? `<p class="warn">${esc(D.meta.message)}</p>` : ''}
+    <p class="muted">Folders like <span class="mono">.venv</span>, <span class="mono">__pycache__</span> and <span class="mono">node_modules</span> are skipped automatically.</p>`);
+  Picker.open();
+}
+})();
+</script>
+</body>
+</html>

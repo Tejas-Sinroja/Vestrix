@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codeflow"
+version = "0.2.0"
+description = "Interactive call-graph and data-flow explorer for Python codebases"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [{ name = "Tejas Gajjar" }]
+dependencies = []
+
+[project.scripts]
+codeflow = "codeflow.cli:main"
+
+[tool.setuptools]
+packages = ["codeflow"]
+
+[tool.setuptools.package-data]
+codeflow = ["viewer.html"]
