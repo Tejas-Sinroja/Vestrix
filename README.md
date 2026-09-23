@@ -3,6 +3,8 @@
 Interactive explorer that helps developers understand **how a Python codebase fits together and how data moves through it**.
 Point it at a repo and get a single offline HTML app, or a live server, with four linked views:
 
+![codeflow tracing a request body from an HTTP route through validation, the service layer and pricing](docs/images/trace.png)
+
 | View | Answers | How to use |
 |---|---|---|
 | **Calls** | "When this runs, what else runs? Who calls it?" | Adjust caller/callee depth, toggle library calls, **find the call path** between two functions |
@@ -13,6 +15,45 @@ Point it at a repo and get a single offline HTML app, or a live server, with fou
 The side panel shows the signature, docstring, callers, callees, library calls, complexity, and **highlighted source**,
 plus an *Open in VS Code* link. The sidebar lists detected **entry points** (HTTP routes, `__main__` scripts, CLI commands,
 Celery-style tasks, tests) and **insights** (most-called, most-complex, never-called functions).
+
+## Screenshots
+
+All screenshots use the bundled demo app in [`examples/sample_shop`](examples/sample_shop). Open
+[`examples/sample_shop.html`](examples/sample_shop.html) to try it yourself.
+
+### Calls: what runs when this runs
+
+Starting from the `POST /checkout` route, you can see every function it reaches, grouped by module and labelled with
+the line each call happens on. The panel on the right shows the source with the call lines highlighted.
+
+![Call graph from the POST /checkout route](docs/images/calls.png)
+
+### Data flow: how values move inside a function
+
+This is `CheckoutService.checkout`: parameters (blue) → variables → calls (yellow = project code) → `return` (green).
+Selecting `items` highlights every line where it's used.
+
+![Data flow inside CheckoutService.checkout](docs/images/dataflow.png)
+
+### Trace: follow one value across the whole program
+
+This traces the HTTP request `body` forward. It becomes `request` in `handle_checkout`, is validated and normalised,
+then turns into `items` in the service and in `price_items`. The right side lists the journey function by function.
+
+![Tracing the request body across six functions](docs/images/trace.png)
+
+### Modules: how the files are wired
+
+This is the import graph between modules. Click a module to see what it imports, what imports it, and what it contains.
+
+![Module import graph](docs/images/modules.png)
+
+### Open any folder
+
+Paste a path, or choose a folder. A plain HTML file can analyze the folder right in the browser; the local app
+(`codeflow.bat`) adds a folder browser that shows what each folder contains.
+
+![Open a project folder dialog](docs/images/open-folder.png)
 
 ## Quick start
 

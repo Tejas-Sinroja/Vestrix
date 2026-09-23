@@ -913,6 +913,8 @@ function readHash() {
   const p = new URLSearchParams(location.hash.slice(1));
   const fn = p.get('fn'); if (fn && F[fn]) S.focus = fn;
   const v = p.get('v'); if (['calls', 'flow', 'trace', 'modules'].includes(v)) S.view = v;
+  if (p.get('sel')) S.sel = p.get('sel');                 // preselect a node (deep links / screenshots)
+  S.pick = p.get('pick') === '1';
   if (S.view === 'trace') { const t = p.get('t'); if (t) computeTrace(t, p.get('d') === 'back' ? 'back' : 'fwd'); else if (!S.trace) S.view = 'flow'; }
 }
 window.addEventListener('popstate', () => { readHash(); render(false); });
@@ -1257,6 +1259,7 @@ S.focus = (starts.length ? starts : ALL).map(q => [reach(q), q]).sort((a, b) => 
   .map(x => x[1])[0] || null;
 readHash();
 render(false);
+if (S.pick && !D.meta.landing) Picker.open();
 if (D.meta.landing) {
   panel(`<div class="kicker">welcome</div><h2>Pick a project folder</h2>
     <p>codeflow reads every <span class="mono">.py</span> file in the folder (without running anything) and shows how functions call each other and how values move between them.</p>
