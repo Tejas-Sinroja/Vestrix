@@ -1,12 +1,13 @@
 """
 Command line interface.
 
-  codeflow build  <path> [-o codeflow.html] [--open]      interactive offline HTML
-  codeflow ui     [path]                                  open the app; pick any folder in the browser
-  codeflow serve  [path] [--port 8347] [--open]           live: re-analyzes on every refresh
-  codeflow list   <path> [--entries]                      functions / entry points
-  codeflow trace  <path> <function> <variable> [--back]   follow a value across functions
-  codeflow json   <path> [-o graph.json]                  raw graph for other tools
+  vestrix build  <path> [-o vestrix.html] [--open]      interactive offline HTML
+  vestrix ui     [path]                                  open the app; pick any folder in the browser
+  vestrix serve  [path] [--port 8347] [--open]           live: re-analyzes on every refresh
+  vestrix list   <path> [--entries]                      functions / entry points
+  vestrix trace  <path> <function> <variable> [--back]   follow a value across functions
+  vestrix cycles <path> [--no-fail]                      circular imports (fails CI on import-time cycles)
+  vestrix json   <path> [-o graph.json]                  raw graph for other tools
 """
 from __future__ import annotations
 
@@ -38,7 +39,7 @@ def cmd_build(a):
     p = _project(a)
     out = Path(a.out).resolve()
     out.write_text(build_html(p), encoding="utf-8")
-    print(f"codeflow: {_summary(p)}\nwrote {out}")
+    print(f"vestrix: {_summary(p)}\nwrote {out}")
     if a.open:
         webbrowser.open(out.as_uri())
     return 0
@@ -105,6 +106,26 @@ def cmd_trace(a):
     return 0
 
 
+def cmd_cycles(a):
+    p = _project(a)
+    cycles = p.import_cycles()
+    hard = [c for c in cycles if c["severity"] == "import-time"]
+    if not cycles:
+        print(f"no circular imports in {len(p.modules)} modules")
+        return 0
+    for c in cycles:
+        label = "IMPORT-TIME CYCLE" if c["severity"] == "import-time" else "deferred cycle (via function-level import)"
+        print(f"\n{label}: {' -> '.join(c['path'])}")
+        for s in c["steps"]:
+            print(f"    {s['file']}:{s['line']}  {s['from']} imports {s['to']}  [{s['kind']}]")
+    print(f"\n{len(hard)} import-time, {len(cycles) - len(hard)} deferred")
+    if hard:
+        print("import-time cycles can fail with 'ImportError: cannot import name ... (partially initialized module)'.\n"
+              "fix: move the import into the function that needs it, import the module instead of names,\n"
+              "or move the shared code into a third module both can import.")
+    return 1 if hard and not a.no_fail else 0
+
+
 def cmd_json(a):
     p = _project(a)
     text = json.dumps(p.to_json(), indent=2, ensure_ascii=False)
@@ -122,8 +143,8 @@ def main(argv=None):
             stream.reconfigure(encoding="utf-8", errors="replace")
         except (AttributeError, ValueError):
             pass
-    ap =argparse.ArgumentParser(prog="codeflow", description="Interactive call-graph and data-flow explorer for Python.")
-    ap.add_argument("--version", action="version", version=f"codeflow {VERSION}")
+    ap =argparse.ArgumentParser(prog="vestrix", description="Interactive call-graph and data-flow explorer for Python.")
+    ap.add_argument("--version", action="version", version=f"vestrix {VERSION}")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     def common(sp):
@@ -132,7 +153,7 @@ def main(argv=None):
         return sp
 
     b = common(sub.add_parser("build", help="write a self-contained interactive HTML file"))
-    b.add_argument("-o", "--out", default="codeflow.html")
+    b.add_argument("-o", "--out", default="vestrix.html")
     b.add_argument("--open", action="store_true", help="open it in the browser")
     b.add_argument("--no-source", action="store_true", help="don't embed source code in the HTML")
     b.set_defaults(fn=cmd_build)
@@ -158,15 +179,19 @@ def main(argv=None):
     t.add_argument("--limit", type=int, default=200)
     t.set_defaults(fn=cmd_trace)
 
+    cy = common(sub.add_parser("cycles", help="find circular imports (exit code 1 on import-time cycles, for CI)"))
+    cy.add_argument("--no-fail", action="store_true", help="always exit 0")
+    cy.set_defaults(fn=cmd_cycles)
+
     j = common(sub.add_parser("json", help="dump the analysis as JSON"))
-    j.add_argument("-o", "--out", default="codeflow.json", help="output file, or - for stdout")
+    j.add_argument("-o", "--out", default="vestrix.json", help="output file, or - for stdout")
     j.set_defaults(fn=cmd_json)
 
     a = ap.parse_args(argv)
     try:
         return a.fn(a)
     except FileNotFoundError as e:
-        print(f"codeflow: {e}", file=sys.stderr)
+        print(f"vestrix: {e}", file=sys.stderr)
         return 2
 
 

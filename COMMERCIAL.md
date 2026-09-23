@@ -36,7 +36,7 @@ grants commercial rights.
 Contact **Tejas Sinroja**:
 
 - email: tejassinroja@gmail.com
-- or open an issue titled "Commercial license" at https://github.com/Tejas-Sinroja/CodeFlow/issues
+- or open an issue titled "Commercial license" at https://github.com/Tejas-Sinroja/Vestrix/issues
 
 Please include your company name, roughly how many developers will use it, and how you plan to use it.
 

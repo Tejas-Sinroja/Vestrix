@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from codeflow import Project, build_html  # noqa: E402
+from vestrix import Project, build_html  # noqa: E402
 
 SAMPLE = ROOT / "examples" / "sample_shop"
 
@@ -67,16 +67,42 @@ class SampleShopTests(unittest.TestCase):
 
 class ServerHelpersTests(unittest.TestCase):
     def test_list_dir_detects_project_markers(self):
-        from codeflow.server import list_dir
+        from vestrix.server import list_dir
         d = list_dir(str(ROOT / "examples"))
         shop = next(x for x in d["dirs"] if x["name"] == "sample_shop")
         self.assertEqual(shop["py"], 1)                       # main.py at the top level
         self.assertGreaterEqual(d["py_total"], 9)
 
     def test_landing_page_renders(self):
-        from codeflow.render import empty_data
+        from vestrix.render import empty_data
         page = build_html(data=empty_data(ROOT))
         self.assertIn('"landing":true', page)
+
+
+class CircularImportTests(unittest.TestCase):
+    def test_cycle_kinds(self):
+        import tempfile
+        files = {
+            "a.py": "import b\n\ndef fa():\n    return b.fb()\n",
+            "b.py": "from a import fa\n\ndef fb():\n    return 1\n",                    # a <-> b at import time
+            "c.py": "import d\n",
+            "d.py": "def fd():\n    import c\n    return c\n",                          # c <-> d only via a function
+            "e.py": "from typing import TYPE_CHECKING\nif TYPE_CHECKING:\n    import f\n",
+            "f.py": "import e\n",                                                    # typing-only: not a cycle
+        }
+        with tempfile.TemporaryDirectory() as d:
+            for name, src in files.items():
+                Path(d, name).write_text(src)
+            cycles = {frozenset(c["modules"]): c for c in Project(d).import_cycles()}
+        self.assertEqual(cycles[frozenset({"a", "b"})]["severity"], "import-time")
+        self.assertEqual(cycles[frozenset({"c", "d"})]["severity"], "deferred")
+        self.assertNotIn(frozenset({"e", "f"}), cycles)
+        path = cycles[frozenset({"a", "b"})]["path"]
+        self.assertEqual(path[0], path[-1])
+        self.assertEqual(len(path), 3)
+
+    def test_sample_has_no_cycles(self):
+        self.assertEqual(Project(SAMPLE).import_cycles(), [])
 
 
 class EdgeCaseTests(unittest.TestCase):

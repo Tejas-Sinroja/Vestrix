@@ -17,7 +17,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Tag must match codeflow VERSION
+      - name: Tag must match vestrix VERSION
         run: python scripts/release.py check-tag "$GITHUB_REF_NAME"
 
       - name: Unit tests
@@ -27,7 +27,7 @@ jobs:
         run: |
           python -m pip install --upgrade build
           python -m build
-          python -m codeflow build examples/sample_shop -o "dist/codeflow-demo-$GITHUB_REF_NAME.html"
+          python -m vestrix build examples/sample_shop -o "dist/vestrix-demo-$GITHUB_REF_NAME.html"
           ls -l dist
 
       - name: Release notes from CHANGELOG
@@ -38,6 +38,6 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" dist/* \
-            --title "codeflow $GITHUB_REF_NAME" \
+            --title "Vestrix $GITHUB_REF_NAME" \
             --notes-file notes.md \
             --verify-tag

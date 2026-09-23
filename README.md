@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/brand/logo-dark.svg">
-    <img src="docs/brand/logo-light.svg" alt="codeflow" width="360">
+    <img src="docs/brand/logo-light.svg" alt="Vestrix" width="360">
   </picture>
 </p>
 
@@ -9,8 +9,8 @@
 Interactive call graphs and data-flow tracing for Python: offline, zero dependencies, and nothing leaves your machine.</p>
 
 <p align="center">
-  <a href="https://github.com/Tejas-Sinroja/CodeFlow/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Tejas-Sinroja/CodeFlow/actions/workflows/ci.yml/badge.svg"></a>
-  <a href="https://github.com/Tejas-Sinroja/CodeFlow/releases"><img alt="Release" src="https://img.shields.io/github/v/release/Tejas-Sinroja/CodeFlow?sort=semver"></a>
+  <a href="https://github.com/Tejas-Sinroja/Vestrix/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Tejas-Sinroja/Vestrix/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/Tejas-Sinroja/Vestrix/releases"><img alt="Release" src="https://img.shields.io/github/v/release/Tejas-Sinroja/Vestrix?sort=semver"></a>
   <img alt="Python 3.9+" src="https://img.shields.io/badge/python-3.9%2B-3776ab">
   <img alt="No dependencies" src="https://img.shields.io/badge/dependencies-none-brightgreen">
   <a href="LICENSE"><img alt="License: PolyForm Noncommercial" src="https://img.shields.io/badge/license-PolyForm%20Noncommercial-orange"></a>
@@ -18,24 +18,26 @@ Interactive call graphs and data-flow tracing for Python: offline, zero dependen
 
 ---
 
-## Why codeflow
+## Why Vestrix
 
 Code gets written faster than ever. With vibe coding, an assistant can write a whole feature in minutes. Reading it is still slow.
 When you accept code you never traced by hand, you pick up **comprehension debt**: the program works, but nobody holds
 a mental model of *what calls what* or *where a value ends up*. That debt comes due the first time you have to debug it,
 review it, secure it, or change it.
 
-codeflow pays that debt down visually. Point it at any Python folder, whether it's your own code, an AI-generated feature,
+Vestrix pays that debt down visually. Point it at any Python folder, whether it's your own code, an AI-generated feature,
 or a repo you just cloned, and in about a second you can answer:
 
 - **"What happens when this endpoint is hit?"** Follow the call graph from any route, script or CLI command.
 - **"Where does this value go?"** Click `request.body` and watch it travel through every function it reaches.
 - **"Where did this come from?"** Trace a value backwards to its sources.
 - **"What did the AI actually pull in?"** See detected frameworks, entry points, and functions nothing calls.
+- **"Why does this crash on import?"** Find **circular imports**, with the exact `file:line` of each import in the loop
+  and how to break it.
 
 It reads code with Python's own `ast` module and never runs it, so it's safe to use on code you don't trust yet.
 
-![codeflow tracing a request body from an HTTP route through validation, the service layer and pricing](docs/images/trace.png)
+![Vestrix tracing a request body from an HTTP route through validation, the service layer and pricing](docs/images/trace.png)
 
 ## What you get
 
@@ -46,7 +48,7 @@ Four linked views:
 | **Calls** | "When this runs, what else runs? Who calls it?" | Adjust caller/callee depth, toggle library calls, **find the call path** between two functions |
 | **Data flow** | "Inside this function, where does each value come from and go?" | Params → variables → calls → return. Double-click a yellow call to step into it |
 | **Trace** | "If I change this value, what does it affect across the whole program?" | Click any value in Data flow → *Where does it go?* / *Where does it come from?* |
-| **Modules** | "How are the files wired together?" | Import graph; click for imports / imported-by / contents |
+| **Modules** | "How are the files wired together? Is anything circular?" | Import graph with circular imports in red; click a module or cycle for details |
 
 The side panel shows the signature, docstring, callers, callees, library calls, complexity, and **highlighted source**,
 plus an *Open in VS Code* link. The sidebar lists detected **entry points** (HTTP routes, `__main__` scripts, CLI commands,
@@ -78,6 +80,23 @@ then turns into `items` in the service and in `price_items`. The right side list
 
 ![Tracing the request body across six functions](docs/images/trace.png)
 
+### Circular imports: catch the crash before it happens
+
+Vestrix separates **import-time** cycles, which can fail with `ImportError: … partially initialized module`, from
+**deferred** cycles that only close through an import inside a function. Deferred cycles work, but they're fragile.
+Imports under `if TYPE_CHECKING:` are ignored. Each cycle shows the loop, the `file:line` of every import, and ways to fix it.
+
+![Circular import between models and services](docs/images/cycles.png)
+
+In CI, `vestrix cycles .` exits with code 1 when it finds an import-time cycle:
+
+```bash
+python -m vestrix cycles .
+# IMPORT-TIME CYCLE: app.models -> app.services -> app.models
+#     app/models.py:1    app.models imports app.services   [top]
+#     app/services.py:1  app.services imports app.models   [top]
+```
+
 ### Modules: how the files are wired
 
 This is the import graph between modules. Click a module to see what it imports, what imports it, and what it contains.
@@ -87,20 +106,20 @@ This is the import graph between modules. Click a module to see what it imports,
 ### Open any folder
 
 Paste a path, or choose a folder. A plain HTML file can analyze the folder right in the browser; the local app
-(`codeflow.bat`) adds a folder browser that shows what each folder contains.
+(`vestrix.bat`) adds a folder browser that shows what each folder contains.
 
 ![Open a project folder dialog](docs/images/open-folder.png)
 
 ## Quick start
 
 ```bash
-cd D:\Project\codeflow
-python -m codeflow ui                                      # opens the app with a folder picker
-python -m codeflow ui D:\Project\RangeBreak                # or start with a folder
-python -m codeflow build path/to/your/repo -o flow.html --open   # one offline file to share
+cd D:\Project\vestrix
+python -m vestrix ui                                      # opens the app with a folder picker
+python -m vestrix ui D:\Project\RangeBreak                # or start with a folder
+python -m vestrix build path/to/your/repo -o flow.html --open   # one offline file to share
 ```
 
-**Easiest on Windows:** double-click `codeflow.bat` (or drag a project folder onto it). It starts the app on
+**Easiest on Windows:** double-click `vestrix.bat` (or drag a project folder onto it). It starts the app on
 `http://127.0.0.1:8347` (and moves to the next port if that one is busy), then opens your browser.
 
 ### Choosing a folder
@@ -115,7 +134,7 @@ Click the folder button in the header (or press `O`). It works in both kinds of 
 - **Folder path**: paste a path such as `D:\Project\RangeBreak`. If the local app is running, the page opens that path
   in the app. If it isn't, the path is kept for "Open in VS Code" links when you choose the folder.
 
-**Running the local app** (`codeflow.bat` / `python -m codeflow ui`), the picker lets you:
+**Running the local app** (`vestrix.bat` / `python -m vestrix ui`), the picker lets you:
 
 - type or paste a path, or use **Browse…** for the normal Windows folder dialog
 - browse drives, Home, the current directory, and **recently opened** projects
@@ -130,13 +149,14 @@ The server re-analyzes on every page refresh, so code changes show up immediatel
 Other commands:
 
 ```bash
-python -m codeflow list  <repo> --entries                   # entry points
-python -m codeflow trace <repo> checkout_endpoint body      # follow a value in the terminal
-python -m codeflow trace <repo> apply_tax amount --back     # where does it come from?
-python -m codeflow json  <repo> -o graph.json               # raw graph for other tools
+python -m vestrix list  <repo> --entries                   # entry points
+python -m vestrix trace <repo> checkout_endpoint body      # follow a value in the terminal
+python -m vestrix trace <repo> apply_tax amount --back     # where does it come from?
+python -m vestrix cycles <repo>                            # circular imports (exit 1 on import-time cycles)
+python -m vestrix json  <repo> -o graph.json               # raw graph for other tools
 ```
 
-Or install it as a command: `pip install -e .` then `codeflow serve .`
+Or install it as a command: `pip install -e .` then `vestrix serve .`
 
 No dependencies (stdlib only, Python 3.8+). The HTML is fully self-contained and works offline.
 
@@ -161,13 +181,13 @@ hover a node to highlight its connections · double-click to refocus. The URL ha
 
 ## Versioning & releases
 
-codeflow uses [Semantic Versioning](https://semver.org/) with tags named `vX.Y.Z`. Every tag becomes a
-[GitHub Release](https://github.com/Tejas-Sinroja/CodeFlow/releases) with a wheel, an sdist and a demo page, built
+Vestrix uses [Semantic Versioning](https://semver.org/) with tags named `vX.Y.Z`. Every tag becomes a
+[GitHub Release](https://github.com/Tejas-Sinroja/Vestrix/releases) with a wheel, an sdist and a demo page, built
 automatically. See [CHANGELOG.md](CHANGELOG.md) for what changed and [RELEASING.md](RELEASING.md) for the release cycle.
 
 ```bash
-pip install "git+https://github.com/Tejas-Sinroja/CodeFlow@v0.3.0"   # a specific release
-codeflow ui
+pip install "git+https://github.com/Tejas-Sinroja/Vestrix@v0.3.0"   # a specific release
+vestrix ui
 ```
 
 ## License
@@ -184,12 +204,14 @@ Contributions are welcome under the terms in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 The logo files are in [`docs/brand`](docs/brand): `mark.svg` (app icon / favicon), `logo-light.svg` and `logo-dark.svg`
 (wordmark), and `banner.svg` / `social-preview.png` (1280×640, for the repository's social preview). The mark is a
-"C" drawn as a flow path. Blue nodes are code; the orange half is a traced value, the same highlight the app uses.
+"V" drawn as a flow path. A value enters the code (the light stroke), reaches a call (the vertex), and its traced path
+comes back out (orange, the same highlight the app uses). The name comes from Latin *vestigium*, "trace, footprint",
+which is also the root of *investigate*.
 
 ## Project layout
 
 ```
-codeflow/
+vestrix/
   analyzer.py   static analysis engine (Project, trace, JSON export)
   render.py     embeds the analysis into viewer.html
   viewer.html   the interactive app (vanilla JS + SVG, layered graph layout, no CDN)

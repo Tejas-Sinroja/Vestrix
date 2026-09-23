@@ -1,16 +1,16 @@
-# Releasing codeflow
+# Releasing Vestrix
 
 ## Versioning
 
-codeflow follows [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PATCH`, with tags named `vMAJOR.MINOR.PATCH`.
+Vestrix follows [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PATCH`, with tags named `vMAJOR.MINOR.PATCH`.
 
 | Bump | When | Examples |
 |---|---|---|
 | **patch** `0.3.0 → 0.3.1` | Bug fixes only. Nothing a user relies on changes. | wrong call resolution, layout glitch, crash on odd syntax |
 | **minor** `0.3.1 → 0.4.0` | New features, and while we're below 1.0 also changes that break CLI flags or the JSON format (called out under **Changed**) | a new view, a framework adapter, runtime tracing |
-| **major** `0.x → 1.0.0` | The CLI, the `codeflow json` format and the viewer URL scheme are declared stable. After 1.0, any breaking change needs a major bump. | |
+| **major** `0.x → 1.0.0` | The CLI, the `vestrix json` format and the viewer URL scheme are declared stable. After 1.0, any breaking change needs a major bump. | |
 
-The version is defined in one place: `VERSION` in `codeflow/analyzer.py`. `pyproject.toml`, `codeflow --version`,
+The version is defined in one place: `VERSION` in `vestrix/analyzer.py`. `pyproject.toml`, `vestrix --version`,
 the viewer and the release workflow all read it from there.
 
 ## Release cycle
@@ -47,8 +47,8 @@ The tag starts `.github/workflows/release.yml`, which:
 ## Installing a release
 
 ```bash
-pip install "git+https://github.com/Tejas-Sinroja/CodeFlow@v0.3.0"
-# or download the .whl from the Releases page and: pip install codeflow-0.3.0-py3-none-any.whl
+pip install "git+https://github.com/Tejas-Sinroja/Vestrix@v0.3.0"
+# or download the .whl from the Releases page and: pip install vestrix-0.3.0-py3-none-any.whl
 ```
 
 ## If something goes wrong

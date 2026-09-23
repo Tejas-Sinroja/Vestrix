@@ -1,5 +1,5 @@
 """
-Release helper for codeflow. The version lives in exactly one place: VERSION in codeflow/analyzer.py.
+Release helper for vestrix. The version lives in exactly one place: VERSION in vestrix/analyzer.py.
 
   python scripts/release.py bump patch|minor|major [--dry-run] [--push]
       bump the version, move CHANGELOG "Unreleased" notes under the new version,
@@ -20,9 +20,9 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-VERSION_FILE = ROOT / "codeflow" / "analyzer.py"
+VERSION_FILE = ROOT / "vestrix" / "analyzer.py"
 CHANGELOG = ROOT / "CHANGELOG.md"
-REPO_URL = "https://github.com/Tejas-Sinroja/CodeFlow"
+REPO_URL = "https://github.com/Tejas-Sinroja/Vestrix"
 VERSION_RE = re.compile(r'^VERSION = "(\d+)\.(\d+)\.(\d+)"$', re.M)
 
 
@@ -80,7 +80,7 @@ def cmd_bump(a):
     log = log.replace(f"[Unreleased]: {REPO_URL}/compare/{tag}...HEAD",
                       f"[Unreleased]: {REPO_URL}/compare/{tag}...HEAD\n{link}", 1)
 
-    print(f"codeflow {old_s} -> {new_s} ({a.part})\n\n{notes}\n")
+    print(f"vestrix {old_s} -> {new_s} ({a.part})\n\n{notes}\n")
     print("running tests…")
     r = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "tests"], cwd=ROOT)
     if r.returncode:
@@ -94,7 +94,7 @@ def cmd_bump(a):
     CHANGELOG.write_text(log, encoding="utf-8")
     git("add", str(VERSION_FILE), str(CHANGELOG))
     git("commit", "-m", f"Release {tag}")
-    git("tag", "-a", tag, "-m", f"codeflow {tag}\n\n{notes}")
+    git("tag", "-a", tag, "-m", f"vestrix {tag}\n\n{notes}")
     print(f"\ncommitted and tagged {tag}")
     if a.push:
         git("push", "origin", "main", "--follow-tags")
@@ -116,7 +116,7 @@ def cmd_notes(a):
 def cmd_check_tag(a):
     want = f"v{fmt(current())}"
     if a.tag != want:
-        die(f"tag {a.tag} does not match codeflow VERSION ({want})")
+        die(f"tag {a.tag} does not match vestrix VERSION ({want})")
     print(f"tag {a.tag} matches VERSION")
     return 0
 
@@ -127,7 +127,7 @@ def main(argv=None):
             stream.reconfigure(encoding="utf-8", errors="replace")
         except (AttributeError, ValueError):
             pass
-    ap = argparse.ArgumentParser(description="codeflow release helper")
+    ap = argparse.ArgumentParser(description="vestrix release helper")
     sub = ap.add_subparsers(dest="cmd", required=True)
     b = sub.add_parser("bump")
     b.add_argument("part", choices=["patch", "minor", "major"])

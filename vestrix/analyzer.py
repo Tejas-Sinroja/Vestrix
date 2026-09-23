@@ -1,5 +1,5 @@
 """
-codeflow.analyzer - static analysis of a Python codebase into:
+vestrix.analyzer - static analysis of a Python codebase into:
 
   * a call graph        (which function calls which, resolved across modules)
   * local data flow     (inside each function: params -> variables -> calls -> return)
@@ -93,6 +93,7 @@ class Module:
     text: str
     aliases: dict = field(default_factory=dict)
     top_names: set = field(default_factory=set)
+    imports: list = field(default_factory=list)    # [(dotted target, lineno, kind)]; kind: top | lazy | typing
 
 
 # ============================================================================ AST helpers
@@ -306,6 +307,58 @@ def build_func(node, qual, mod, cls, is_module=False):
     return f
 
 
+def _sccs(adj):
+    """Tarjan's strongly connected components (iterative)."""
+    index, low, on, stack, out, counter = {}, {}, set(), [], [], [0]
+    for root in adj:
+        if root in index:
+            continue
+        work = [(root, iter(adj.get(root, ())))]
+        index[root] = low[root] = counter[0]; counter[0] += 1
+        stack.append(root); on.add(root)
+        while work:
+            v, it = work[-1]
+            for w in it:
+                if w not in index:
+                    index[w] = low[w] = counter[0]; counter[0] += 1
+                    stack.append(w); on.add(w)
+                    work.append((w, iter(adj.get(w, ()))))
+                    break
+                if w in on:
+                    low[v] = min(low[v], index[w])
+            else:
+                work.pop()
+                if work:
+                    low[work[-1][0]] = min(low[work[-1][0]], low[v])
+                if low[v] == index[v]:
+                    comp = []
+                    while True:
+                        w = stack.pop(); on.discard(w); comp.append(w)
+                        if w == v:
+                            break
+                    out.append(comp)
+    return out
+
+
+def _shortest_cycle(adj, start, allowed):
+    """Shortest path start -> ... -> start inside one component (BFS)."""
+    prev, queue = {start: None}, deque([start])
+    while queue:
+        u = queue.popleft()
+        for w in adj.get(u, ()):
+            if w not in allowed:
+                continue
+            if w == start:
+                nodes = [u]
+                while prev[nodes[-1]] is not None:
+                    nodes.append(prev[nodes[-1]])
+                return nodes[::-1] + [start]                  # nodes[::-1] begins with start
+            if w not in prev:
+                prev[w] = u
+                queue.append(w)
+    return [start, start]
+
+
 # ============================================================================ project
 class Project:
     def __init__(self, root, exclude=(), include_source=True):
@@ -378,6 +431,47 @@ class Project:
                 for a in n.names:
                     if a.name != "*":
                         mod.aliases[a.asname or a.name] = f"{src}.{a.name}" if src else a.name
+        self._import_edges(mod, tree, pkg)
+
+    @staticmethod
+    def _is_type_checking(test):
+        return any((isinstance(x, ast.Name) and x.id == "TYPE_CHECKING")
+                   or (isinstance(x, ast.Attribute) and x.attr == "TYPE_CHECKING") for x in ast.walk(test))
+
+    def _import_edges(self, mod, tree, pkg):
+        """Record every import with *when* it runs: at import time (top), inside a function (lazy),
+        or only for type checkers (typing). Only 'top' imports can cause import-time cycles."""
+        def visit(node, kind):
+            for ch in ast.iter_child_nodes(node):
+                if isinstance(ch, (*FUNC_TYPES, ast.Lambda)):
+                    visit(ch, "lazy" if kind == "top" else kind)
+                elif isinstance(ch, ast.If) and self._is_type_checking(ch.test):
+                    for s in ch.body:
+                        visit_stmt(s, "typing")
+                    for s in ch.orelse:
+                        visit_stmt(s, kind)
+                else:
+                    visit_stmt(ch, kind)
+
+        def visit_stmt(ch, kind):
+            if isinstance(ch, ast.Import):
+                for a in ch.names:
+                    mod.imports.append((a.name, ch.lineno, kind))
+            elif isinstance(ch, ast.ImportFrom):
+                if ch.level:
+                    base = pkg[: max(0, len(pkg) - (ch.level - 1))]
+                    src = ".".join(base + ([ch.module] if ch.module else []))
+                else:
+                    src = ch.module or ""
+                for a in ch.names:
+                    target = f"{src}.{a.name}" if src and a.name != "*" else src or a.name
+                    mod.imports.append((target, ch.lineno, kind))
+            if isinstance(ch, (*FUNC_TYPES, ast.Lambda)):
+                visit(ch, "lazy" if kind == "top" else kind)
+            elif isinstance(ch, ast.AST):
+                visit(ch, kind)
+
+        visit(tree, "top")
 
     def _collect(self, node, prefix, mod, cls):
         for ch in ast.iter_child_nodes(node):
@@ -617,11 +711,45 @@ class Project:
         return None
 
     def module_deps(self):
-        deps = {}
+        return {m: sorted(edges) for m, edges in self.import_graph().items()}
+
+    def import_graph(self):
+        """module -> {imported project module: (line, kind)}; the strongest kind wins (top > lazy > typing)."""
+        if hasattr(self, "_igraph"):
+            return self._igraph
+        rank = {"top": 0, "lazy": 1, "typing": 2}
+        g = {}
         for m in self.modules.values():
-            targets = {self.module_of(t) for t in m.aliases.values()}
-            deps[m.name] = sorted(t for t in targets if t and t != m.name)
-        return deps
+            edges = {}
+            for target, line, kind in m.imports:
+                t = self.module_of(target)
+                if not t or t == m.name:
+                    continue
+                if t not in edges or rank[kind] < rank[edges[t][1]]:
+                    edges[t] = (line, kind)
+            g[m.name] = edges
+        self._igraph = g
+        return g
+
+    def import_cycles(self):
+        """Circular imports. 'import-time' cycles use only module-level imports and can fail with
+        'partially initialized module'; 'deferred' cycles only close through function-level imports."""
+        g = self.import_graph()
+        found, seen = [], set()
+        for kinds, severity in (({"top"}, "import-time"), ({"top", "lazy"}, "deferred")):
+            adj = {m: [t for t, (_, k) in e.items() if k in kinds] for m, e in g.items()}
+            for comp in _sccs(adj):
+                if len(comp) < 2:
+                    continue
+                key = frozenset(comp)
+                if key in seen:
+                    continue
+                seen.add(key)
+                path = _shortest_cycle(adj, sorted(comp)[0], set(comp))
+                steps = [{"from": a, "to": b, "line": g[a][b][0], "kind": g[a][b][1],
+                          "file": self.modules[a].file} for a, b in zip(path, path[1:])]
+                found.append({"severity": severity, "modules": sorted(comp), "path": path, "steps": steps})
+        return found
 
     def libraries(self):
         """Third-party packages the project imports -> modules that import them."""
@@ -672,7 +800,10 @@ class Project:
                      "generated": time.strftime("%Y-%m-%d %H:%M"), "stats": self.stats(),
                      "libraries": self.libraries(), "exclude": sorted(self.exclude), "served": False},
             "modules": {n: {"file": m.file, "pkg": m.is_pkg, "lines": m.text.count("\n") + 1,
-                            "imports": deps[n]} for n, m in self.modules.items()},
+                            "imports": deps[n],
+                            "import_info": {t: {"line": ln, "kind": k} for t, (ln, k) in self.import_graph()[n].items()}}
+                        for n, m in self.modules.items()},
+            "cycles": self.import_cycles(),
             "classes": {q: {k: c[k] for k in ("module", "file", "line", "bases", "bases_text", "methods", "doc")}
                         for q, c in self.classes.items()},
             "functions": funcs,

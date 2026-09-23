@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>__CODEFLOW_TITLE__</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%232563eb'/%3E%3Cstop offset='1' stop-color='%230f172a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='15' fill='url(%23g)'/%3E%3Cpath d='M42.02 19.98A17 17 0 0 0 13 32' fill='none' stroke='%23dbe7ff' stroke-width='6' stroke-linecap='round'/%3E%3Cpath d='M13 32A17 17 0 0 0 42.02 44.02' fill='none' stroke='%23ff7a1a' stroke-width='6' stroke-linecap='round'/%3E%3Ccircle cx='42.02' cy='19.98' r='5' fill='%23dbe7ff'/%3E%3Ccircle cx='13' cy='32' r='5.5' fill='%23fff'/%3E%3Ccircle cx='42.02' cy='44.02' r='7.5' fill='%23ff7a1a'/%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='vx-bg' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='#2563eb'/%3E%3Cstop offset='1' stop-color='#0f172a'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='15' fill='url(#vx-bg)'/%3E%3Cpath d='M15.5 17Q19.5 38 32 47' fill='none' stroke='#dbe7ff' stroke-width='6' stroke-linecap='round'/%3E%3Cpath d='M32 47Q44.5 38 48.5 17' fill='none' stroke='#ff7a1a' stroke-width='6' stroke-linecap='round'/%3E%3Ccircle cx='15.5' cy='17' r='5' fill='#dbe7ff'/%3E%3Ccircle cx='32' cy='47' r='5.5' fill='#ffffff'/%3E%3Ccircle cx='48.5' cy='17' r='7.5' fill='#ff7a1a'/%3E%3Ccircle cx='48.5' cy='17' r='2.8' fill='#ffffff'/%3E%3C/svg%3E">
 <style>
 :root{
   --bg:#f6f6f3;--panel:#ffffff;--ink:#1d1d1b;--muted:#6c6c66;--line:#e3e2dc;
   --accent:#2f6fdb;--accent-soft:#e4edfc;--node:#ffffff;--node-line:#c8c7c0;--edge:#a6a59e;
   --hl:#e8590c;--hl-soft:#fff1e7;--param:#e4edfc;--ret:#e3f5e8;--ret-line:#2f9e44;
   --callin:#fff5d9;--callin-line:#d19c00;--ext:#f0f0ed;--code-bg:#fafaf8;
-  --kw:#8a3ffc;--str:#1a7f37;--com:#8b8b85;--num:#b35900;
+  --kw:#8a3ffc;--str:#1a7f37;--com:#8b8b85;--num:#b35900;--bad:#d92d20;--bad-soft:#fdecea;
   --font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --mono:ui-monospace,SFMono-Regular,"Cascadia Code",Consolas,Menlo,monospace;
   color-scheme:light;
@@ -21,7 +21,7 @@
   --accent:#6ea0ff;--accent-soft:#1d2b47;--node:#262624;--node-line:#4b4b45;--edge:#6e6e67;
   --hl:#ff8c42;--hl-soft:#3b2515;--param:#1d2b47;--ret:#15301d;--ret-line:#51cf66;
   --callin:#3a3013;--callin-line:#e0b400;--ext:#2a2a28;--code-bg:#1a1a18;
-  --kw:#c29bff;--str:#7ee2a8;--com:#78786f;--num:#ffb870;color-scheme:dark;
+  --kw:#c29bff;--str:#7ee2a8;--com:#78786f;--num:#ffb870;--bad:#ff6b5e;--bad-soft:#3a1714;color-scheme:dark;
 }}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -33,7 +33,7 @@ header{grid-area:top;display:flex;align-items:center;gap:16px;padding:0 16px;bor
 .brand{font-weight:650;font-size:15px;white-space:nowrap}
 .brand{display:flex;align-items:center;letter-spacing:-.3px}
 .logo{margin-right:8px;flex:none}
-.brand .flow{color:var(--accent)}
+.brand .flow{color:var(--hl)}
 .muted{color:var(--muted);font-weight:400}
 .mono{font-family:var(--mono)}
 #tabs{display:flex;gap:2px;background:var(--bg);padding:3px;border-radius:8px;border:1px solid var(--line)}
@@ -90,6 +90,14 @@ a.b{font:12px var(--font);padding:4px 10px;border-radius:6px;border:1px solid va
 .edge.return{stroke-dasharray:2 3}
 .edge.ext{stroke-dasharray:3 3;opacity:.7}
 .edge.mark{stroke:var(--hl);stroke-width:2.4;marker-end:url(#arr-hl)}
+.edge.cycle{stroke:var(--bad);stroke-width:2.4;marker-end:url(#arr-bad)}
+.edge.cycle.deferred{stroke-dasharray:6 4}
+.arrow.bad{fill:var(--bad)}
+.node.cyc rect.bg{stroke:var(--bad);stroke-width:2}
+.cyc-row{display:block;padding:4px 6px;border-radius:5px;cursor:pointer;font:12px var(--mono);color:var(--bad);text-decoration:none;word-break:break-all}
+.cyc-row:hover{background:var(--bad-soft)}
+.cyc-row .muted{font:11px var(--font)}
+.badge.bad{border-color:var(--bad);color:var(--bad);background:var(--bad-soft)}
 .edge.hot{stroke:var(--accent);stroke-width:2.2;marker-end:url(#arr-hot)}
 .arrow{fill:var(--edge)}.arrow.hl{fill:var(--hl)}.arrow.hot{fill:var(--accent)}
 .elabel{font:10px var(--mono);fill:var(--muted);paint-order:stroke;stroke:var(--bg);stroke-width:3px;pointer-events:none}
@@ -183,7 +191,7 @@ button.b.folder span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </head>
 <body>
 <header>
-  <div class="brand"><svg class="logo" width="22" height="22" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="cf-logo-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2563eb"/><stop offset="1" stop-color="#0f172a"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#cf-logo-bg)"/><path d="M42.02 19.98A17 17 0 0 0 13 32" fill="none" stroke="#dbe7ff" stroke-width="6" stroke-linecap="round"/><path d="M13 32A17 17 0 0 0 42.02 44.02" fill="none" stroke="#ff7a1a" stroke-width="6" stroke-linecap="round"/><circle cx="42.02" cy="19.98" r="5" fill="#dbe7ff"/><circle cx="13" cy="32" r="5.5" fill="#fff"/><circle cx="42.02" cy="44.02" r="7.5" fill="#ff7a1a"/><circle cx="42.02" cy="44.02" r="2.8" fill="#fff"/></svg>code<span class="flow">flow</span></div>
+  <div class="brand"><svg class="logo" width="22" height="22" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="vx-logo-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2563eb"/><stop offset="1" stop-color="#0f172a"/></linearGradient></defs><rect width="64" height="64" rx="15" fill="url(#vx-logo-bg)"/><path d="M15.5 17Q19.5 38 32 47" fill="none" stroke="#dbe7ff" stroke-width="6" stroke-linecap="round"/><path d="M32 47Q44.5 38 48.5 17" fill="none" stroke="#ff7a1a" stroke-width="6" stroke-linecap="round"/><circle cx="15.5" cy="17" r="5" fill="#dbe7ff"/><circle cx="32" cy="47" r="5.5" fill="#ffffff"/><circle cx="48.5" cy="17" r="7.5" fill="#ff7a1a"/><circle cx="48.5" cy="17" r="2.8" fill="#ffffff"/></svg>vestri<span class="flow">x</span></div>
   <button class="b folder" id="openBtn" title="Open another folder (O)"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4.2l2 2.2h8.8A1.5 1.5 0 0 1 21 8.7v9.8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z" fill="none" stroke="currentColor" stroke-width="1.8"/></svg><span id="proj">Open folder</span></button>
   <nav id="tabs">
     <button data-view="calls">Calls<kbd>1</kbd></button>
@@ -207,6 +215,7 @@ button.b.folder span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     <defs>
       <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" class="arrow"/></marker>
       <marker id="arr-hl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" class="arrow hl"/></marker>
+      <marker id="arr-bad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" class="arrow bad"/></marker>
       <marker id="arr-hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" class="arrow hot"/></marker>
     </defs>
     <g id="viewport"><g id="edges"></g><g id="elabels"></g><g id="nodes"></g></g>
@@ -310,7 +319,7 @@ const linesOf = file => fileLines[file] || (fileLines[file] = (D.files[file] || 
 const fnsOf = m => ALL.filter(q => F[q].module === m).sort((a, b) => F[a].line - F[b].line);
 
 // ------------------------------------------------------------------ state
-const S = { view: 'calls', focus: null, sel: null, down: 3, up: 1, tdepth: 8, orient: { calls: 'LR', flow: 'TB', trace: 'TB', modules: 'LR' }, ext: false, path: null, pathMsg: '', pathTarget: '', trace: null };
+const S = { view: 'calls', focus: null, sel: null, cycle: null, down: 3, up: 1, tdepth: 8, orient: { calls: 'LR', flow: 'TB', trace: 'TB', modules: 'LR' }, ext: false, path: null, pathMsg: '', pathTarget: '', trace: null };
 
 // ------------------------------------------------------------------ graph engine (layered layout + pan/zoom)
 const Graph = (() => {
@@ -582,14 +591,40 @@ function panelClass(q) {
     <h4>Source</h4>${sourceBlock(c.file, c.line, c.methods.length ? Math.max(...c.methods.map(m => F[m].end)) : c.line + 20)}
   `, q);
 }
+const CYCLES = D.cycles || [];
+const cycleText = c => c.path.join(' → ');
+function panelCycle(i) {
+  const c = CYCLES[i]; if (!c) return;
+  const hard = c.severity === 'import-time';
+  panel(`
+    <div class="kicker">circular import</div>
+    <h2 class="mono">${esc(cycleText(c))}</h2>
+    <div>${badge(hard ? 'import-time cycle' : 'deferred cycle', hard ? 'bad' : 'warn')}${badge(c.modules.length + ' modules')}</div>
+    <p>${hard
+      ? 'These modules import each other while they are still loading. Depending on which one is imported first, Python can fail with <span class="mono">ImportError: cannot import name … (partially initialized module)</span>, or see names that aren\'t defined yet.'
+      : 'This loop only closes through an import inside a function, so it works at import time, but it\'s fragile: moving that import to the top of the file turns it into a real crash.'}</p>
+    <h4>The loop</h4>
+    <ul class="steps">${c.steps.map(s => `<li><a class="lnk" data-mod="${esc(s.from)}">${esc(s.from)}</a> <span class="muted">imports</span> <a class="lnk" data-mod="${esc(s.to)}">${esc(s.to)}</a><br><span class="muted">${esc(s.file)}:${s.line} · ${esc(s.kind === 'top' ? 'module level' : 'inside a function')}</span></li>`).join('')}</ul>
+    <h4>How to fix it</h4>
+    <ul class="lst" style="list-style:disc;padding-left:18px">
+      <li style="display:list-item;border:0">Move one import inside the function that needs it (lazy import).</li>
+      <li style="display:list-item;border:0">Import the module (<span class="mono">import a</span>) instead of names from it (<span class="mono">from a import x</span>).</li>
+      <li style="display:list-item;border:0">Move the shared code into a third module that both can import.</li>
+      <li style="display:list-item;border:0">For type hints only, put the import under <span class="mono">if TYPE_CHECKING:</span>.</li>
+    </ul>
+    ${c.steps.map(s => `<h4>${esc(s.file)}</h4>${sourceBlock(s.file, Math.max(1, s.line - 2), s.line + 2, new Set([s.line]))}`).join('')}
+  `);
+}
 function panelModule(m) {
   const mm = M[m]; if (!mm) return;
   const importedBy = Object.keys(M).filter(x => M[x].imports.includes(m));
   const fs = fnsOf(m).filter(q => F[q].kind !== 'module');
   const cl = Object.keys(C).filter(q => C[q].module === m);
+  const mine = CYCLES.map((c, i) => [c, i]).filter(([c]) => c.modules.includes(m));
   panel(`
     <div class="kicker">module</div><h2 class="mono">${esc(m)}</h2>
     <div>${badge(mm.file)}${badge(mm.lines + ' lines')}${mm.pkg ? badge('package') : ''}</div>
+    ${mine.length ? `<h4 class="warn">Circular imports (${mine.length})</h4>${mine.map(([c, i]) => `<a class="cyc-row" data-cycle="${i}">${esc(cycleText(c))} <span class="muted">· ${esc(c.severity)}</span></a>`).join('')}` : ''}
     <h4>Imports (${mm.imports.length})</h4>${mm.imports.length ? `<div class="chips">${mm.imports.map(x => `<a class="chip lnk" data-mod="${esc(x)}">${esc(x)}</a>`).join('')}</div>` : '<p class="empty-note">No project imports.</p>'}
     <h4>Imported by (${importedBy.length})</h4>${importedBy.length ? `<div class="chips">${importedBy.map(x => `<a class="chip lnk" data-mod="${esc(x)}">${esc(x)}</a>`).join('')}</div>` : '<p class="empty-note">Nothing imports this module.</p>'}
     ${cl.length ? `<h4>Classes (${cl.length})</h4>${fnList(cl.map(q => ({ q, meta: 'L' + C[q].line })), '')}` : ''}
@@ -838,16 +873,31 @@ function viewModules() {
   if (!names.length) return empty('No modules.');
   const cnt = {}; for (const q of ALL) if (F[q].kind !== 'module') cnt[F[q].module] = (cnt[F[q].module] || 0) + 1;
   const cur = S.focus && F[S.focus] ? F[S.focus].module : null;
-  const nodes = names.map(m => ({ id: 'mod:' + m, m, label: m, sub: `${cnt[m] || 0} functions · ${M[m].lines} lines`, color: modColor(m), cls: 'fn' + (m === cur ? ' focus' : ''), title: M[m].file }));
-  const E = []; names.forEach(m => M[m].imports.forEach(t => { if (M[t]) E.push({ s: 'mod:' + m, t: 'mod:' + t }); }));
-  tb(`<span class="grp note">Arrows point from a module to what it imports · click to inspect · double-click to open its call graph</span>`);
+  const cycEdge = new Map(), cycMods = new Set(), selMods = new Set();
+  CYCLES.forEach((c, i) => c.steps.forEach(s => {
+    const k = s.from + '>' + s.to;
+    if (!cycEdge.has(k) || c.severity === 'import-time') cycEdge.set(k, c.severity);
+    cycMods.add(s.from); if (i === S.cycle) { selMods.add(s.from); selMods.add(s.to); }
+  }));
+  const nodes = names.map(m => ({ id: 'mod:' + m, m, label: m, sub: `${cnt[m] || 0} functions · ${M[m].lines} lines`, color: modColor(m),
+    cls: 'fn' + (m === cur && S.cycle == null ? ' focus' : '') + (cycMods.has(m) ? ' cyc' : ''), mark: selMods.has(m), title: M[m].file }));
+  const E = []; names.forEach(m => M[m].imports.forEach(t => {
+    if (!M[t]) return;
+    const sev = cycEdge.get(m + '>' + t), info = (M[m].import_info || {})[t];
+    E.push({ s: 'mod:' + m, t: 'mod:' + t, cls: sev ? 'cycle' + (sev === 'deferred' ? ' deferred' : '') : (info && info.kind !== 'top' ? 'param' : ''),
+      label: sev && info ? 'L' + info.line : '' });
+  }));
+  tb(`<span class="grp note">Arrows point from a module to what it imports · click to inspect · double-click to open its call graph</span>
+      ${CYCLES.length ? `<span class="grp warn">${CYCLES.length} circular import${CYCLES.length === 1 ? '' : 's'} · shown in red</span>` : '<span class="grp note">No circular imports</span>'}`);
   Graph.draw(nodes, E, {
-    click: n => panelModule(n.m),
+    edgeLabels: true,
+    click: n => { S.cycle = null; panelModule(n.m); },
     dbl: n => { const fs = fnsOf(n.m).filter(q => F[q].kind !== 'module'); const first = fs[0] || fnsOf(n.m)[0]; if (first) { S.focus = first; S.view = 'calls'; render(); } },
     background: () => {}
   });
-  panelModule(cur || names[0]);
-  legend([['module', 'var(--node)', 'var(--node-line)'], ['current function’s module', 'var(--accent-soft)', 'var(--accent)']]);
+  if (S.cycle != null && CYCLES[S.cycle]) panelCycle(S.cycle); else panelModule(cur || names[0]);
+  legend([['module', 'var(--node)', 'var(--node-line)'], ['current function’s module', 'var(--accent-soft)', 'var(--accent)'],
+    CYCLES.length ? ['circular import', 'var(--bad-soft)', 'var(--bad)'] : null, ['┄ imported inside a function', 'transparent', 'var(--edge)', 1]]);
 }
 
 // ------------------------------------------------------------------ sidebar
@@ -867,6 +917,7 @@ function buildSide() {
   const orphan = real.filter(q => !(callers[q] || []).length && !F[q].entry && !F[q].name.startsWith('__'));
   const row = (q, meta) => `<a class="item fnitem" data-go="${esc(q)}" data-q="${esc(q)}" title="${esc(q)}"><span class="nm">${esc(short(q))}</span><span class="muted">${esc(meta)}</span></a>`;
   $('#insights').innerHTML =
+    (CYCLES.length ? `<div class="subh warn">Circular imports (${CYCLES.length})</div>${CYCLES.map((c, i) => `<a class="cyc-row" data-cycle="${i}" title="${esc(c.severity)}">${esc(cycleText(c))}${c.severity === 'deferred' ? ' <span class="muted">· deferred</span>' : ''}</a>`).join('')}` : '') +
     (hot.length ? `<div class="subh">Most called</div>${hot.map(q => row(q, callers[q].length + ' callers')).join('')}` : '') +
     (cx.length ? `<div class="subh">Most complex</div>${cx.map(q => row(q, 'cx ' + F[q].complexity)).join('')}` : '') +
     (orphan.length ? `<details><summary>Never called statically (${orphan.length})</summary>${orphan.slice(0, 200).map(q => row(q, F[q].module)).join('')}</details>` : '') +
@@ -899,6 +950,7 @@ function go(q, view) {
 }
 document.addEventListener('click', e => {
   const a = e.target.closest('[data-go]'); if (a) { e.preventDefault(); go(a.dataset.go); return; }
+  const cy = e.target.closest('[data-cycle]'); if (cy) { e.preventDefault(); S.cycle = +cy.dataset.cycle; S.view = 'modules'; render(); return; }
   const m = e.target.closest('[data-mod]'); if (m) { e.preventDefault(); panelModule(m.dataset.mod); return; }
   const v = e.target.closest('[data-view-go]'); if (v && panelQ) { S.focus = panelQ; S.sel = null; S.view = v.dataset.viewGo; render(); }
 });
@@ -918,6 +970,7 @@ function readHash() {
   const v = p.get('v'); if (['calls', 'flow', 'trace', 'modules'].includes(v)) S.view = v;
   if (p.get('sel')) S.sel = p.get('sel');                 // preselect a node (deep links / screenshots)
   S.pick = p.get('pick') === '1';
+  if (p.get('cycle') != null && (D.cycles || [])[+p.get('cycle')]) { S.cycle = +p.get('cycle'); S.view = 'modules'; }
   if (S.view === 'trace') { const t = p.get('t'); if (t) computeTrace(t, p.get('d') === 'back' ? 'back' : 'fwd'); else if (!S.trace) S.view = 'flow'; }
 }
 window.addEventListener('popstate', () => { readHash(); render(false); });
@@ -968,7 +1021,7 @@ let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTime
 
 // ------------------------------------------------------------------ folder picker
 const Picker = (() => {
-  const box = $('#picker'), KEY = 'codeflow.recent';
+  const box = $('#picker'), KEY = 'vestrix.recent';
   let cur = null, data = null, seq = 0;
   const recent = () => { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (_) { return []; } };
   const remember = p => { try { localStorage.setItem(KEY, JSON.stringify([p, ...recent().filter(x => x !== p)].slice(0, 8))); } catch (_) {} };
@@ -1064,7 +1117,7 @@ const Picker = (() => {
 const Local = (() => {
   const PYODIDE = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full/';
   const SKIP = new Set(D.meta.skip_dirs || ['.git', '.venv', 'venv', '__pycache__', 'node_modules', 'site-packages']);
-  const PATH_KEY = 'codeflow.lastPath', APP_PORT = 8347;
+  const PATH_KEY = 'vestrix.lastPath', APP_PORT = 8347;
   let py = null;
   const status = (msg, cls = '') => { const s = $('#lcStatus'); if (s) { s.className = 'lc-status ' + cls; s.innerHTML = msg; } };
   const isAbs = p => /^([A-Za-z]:[\\/]|\/|\\\\)/.test(p || '');
@@ -1076,7 +1129,7 @@ const Local = (() => {
           <h4>Folder path</h4>
           <div class="pk-bar" style="padding:0">
             <input id="lcPath" spellcheck="false" placeholder="e.g. D:\\Project\\RangeBreak" value="${esc(lastPath())}">
-            <button class="b" id="lcGo" title="Open this path in the local codeflow app">Open path</button>
+            <button class="b" id="lcGo" title="Open this path in the local Vestrix app">Open path</button>
           </div>
           <p class="muted">Paste any path. If the local app is running it opens directly; otherwise pick the same folder below and the path is used for “Open in VS Code” links.</p>
         </section>
@@ -1108,7 +1161,7 @@ const Local = (() => {
     savePath(p);
     const ex = excludes().join(',');
     const query = '/?path=' + encodeURIComponent(p) + (ex ? '&exclude=' + encodeURIComponent(ex) : '');
-    status('Looking for the local codeflow app…');
+    status('Looking for the local Vestrix app…');
     // image probe: needs no CORS, so it works from a file:// page; other apps on these ports fail the probe
     const probe = port => new Promise(ok => {
       const img = new Image(), t = setTimeout(() => ok(null), 2500);
@@ -1119,14 +1172,14 @@ const Local = (() => {
     const found = (await Promise.all([0, 1, 2, 3, 4].map(i => probe(APP_PORT + i)))).find(Boolean);
     const url = `http://127.0.0.1:${found || APP_PORT}${query}`;
     if (found) { status('Opening in the local app…'); location.href = url; return; }
-    status(`Couldn't find the local codeflow app, and a web page can't read <span class="mono">${esc(p)}</span> on its own.<br>
+    status(`Couldn't find the local Vestrix app, and a web page can't read <span class="mono">${esc(p)}</span> on its own.<br>
       • Click <b>Choose folder…</b> and select that folder (the path above is kept for “Open in VS Code” links), or<br>
-      • start the app — double-click <span class="mono">codeflow.bat</span> in the codeflow folder — then <a class="lnk" href="${esc(url)}">open this path in the app</a>.`, 'warn');
+      • start the app — double-click <span class="mono">vestrix.bat</span> in the Vestrix folder — then <a class="lnk" href="${esc(url)}">open this path in the app</a>.`, 'warn');
   }
   async function choose() {
     if (window.showDirectoryPicker) {
       let dir;
-      try { dir = await window.showDirectoryPicker({ id: 'codeflow', mode: 'read' }); }
+      try { dir = await window.showDirectoryPicker({ id: 'vestrix', mode: 'read' }); }
       catch (e) { if (e && e.name === 'AbortError') return; return $('#lcInput').click(); }
       try {
         const files = [], ex = new Set(excludes());
@@ -1201,7 +1254,7 @@ _d['meta']['browser'] = True
 json.dumps(_d)`);
       relaunch(JSON.parse(out));
     } catch (e) {
-      status('Analysis failed: ' + esc(e.message || e) + '<br>If you are offline, use the local app instead (<span class="mono">codeflow.bat</span>).', 'warn');
+      status('Analysis failed: ' + esc(e.message || e) + '<br>If you are offline, use the local app instead (<span class="mono">vestrix.bat</span>).', 'warn');
       $('#lcChoose').disabled = false;
     }
   }
@@ -1215,7 +1268,7 @@ json.dumps(_d)`);
   }
   return { show, run, isAbs };
 })();
-window.__codeflowLocal = Local;       // used by tests
+window.__vestrixLocal = Local;       // used by tests
 
 // ------------------------------------------------------------------ detected stack
 const FRAMEWORKS = { fastapi: 'FastAPI', flask: 'Flask', django: 'Django', starlette: 'Starlette', celery: 'Celery', click: 'Click',
@@ -1229,8 +1282,10 @@ function buildDetected() {
   const label = { route: 'route', main: 'script', cli: 'CLI command', task: 'task', test: 'test' };
   const summary = Object.entries(kinds).map(([k, n]) => `${n} ${label[k] || k}${n === 1 ? '' : 's'}`).join(' · ');
   const fw = names.filter(n => FRAMEWORKS[n]), other = names.filter(n => !FRAMEWORKS[n]);
+  const hardCycles = CYCLES.filter(c => c.severity === 'import-time').length;
   $('#detected').innerHTML = !ALL.length ? '<p class="empty-note">Open a folder to start.</p>' :
     `${summary ? `<div class="subh">${esc(summary)}</div>` : ''}
+     ${CYCLES.length ? `<a class="cyc-row" data-cycle="0">⚠ ${CYCLES.length} circular import${CYCLES.length === 1 ? '' : 's'}${hardCycles ? ` (${hardCycles} at import time)` : ''}</a>` : ''}
      ${names.length ? `<div class="chips">${fw.map(n => `<span class="chip lib fw" data-lib="${esc(n)}" title="used in ${libs[n].length} module(s)">${esc(FRAMEWORKS[n])}</span>`).join('')}${other.map(n => `<span class="chip lib" data-lib="${esc(n)}" title="used in ${libs[n].length} module(s)">${esc(n)}</span>`).join('')}</div>` : '<p class="empty-note">No third-party imports.</p>'}`;
   $$('#detected [data-lib]').forEach(c => c.onclick = () => panelLibrary(c.dataset.lib));
 }
@@ -1251,8 +1306,8 @@ $('#proj').textContent = D.meta.name || 'Open folder';
 $('#openBtn').title = (D.meta.root ? D.meta.root + '\n' : '') + 'Open another folder (O)';
 buildDetected();
 $('#stats').textContent = `${st.modules} modules · ${st.functions} functions · ${st.classes} classes · ${st.internal_calls} project calls · ${st.lines.toLocaleString()} lines · ${st.elapsed_ms} ms`;
-$('#stats').title = `${D.meta.root}\ngenerated ${D.meta.generated} · codeflow ${D.meta.version}`;
-document.title = D.meta.name ? `codeflow · ${D.meta.name}` : 'codeflow · open a folder';
+$('#stats').title = `${D.meta.root}\ngenerated ${D.meta.generated} · Vestrix ${D.meta.version}`;
+document.title = D.meta.name ? `Vestrix · ${D.meta.name}` : 'Vestrix · open a folder';
 if (D.meta.landing) $('#stats').textContent = 'no folder open';
 buildSide();
 // default focus: the non-test entry point that reaches the most code
@@ -1265,7 +1320,7 @@ render(false);
 if (S.pick && !D.meta.landing) Picker.open();
 if (D.meta.landing) {
   panel(`<div class="kicker">welcome</div><h2>Pick a project folder</h2>
-    <p>codeflow reads every <span class="mono">.py</span> file in the folder (without running anything) and shows how functions call each other and how values move between them.</p>
+    <p>Vestrix reads every <span class="mono">.py</span> file in the folder (without running anything) and shows how functions call each other and how values move between them.</p>
     ${D.meta.message ? `<p class="warn">${esc(D.meta.message)}</p>` : ''}
     <p class="muted">Folders like <span class="mono">.venv</span>, <span class="mono">__pycache__</span> and <span class="mono">node_modules</span> are skipped automatically.</p>`);
   Picker.open();

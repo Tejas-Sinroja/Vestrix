@@ -23,9 +23,9 @@ jobs:
         run: python -m unittest discover -s tests -v
       - name: Smoke test the CLI
         run: |
-          python -m codeflow --version
-          python -m codeflow build examples/sample_shop -o demo.html
-          python -m codeflow trace examples/sample_shop checkout_endpoint body --limit 5
+          python -m vestrix --version
+          python -m vestrix build examples/sample_shop -o demo.html
+          python -m vestrix trace examples/sample_shop checkout_endpoint body --limit 5
       - name: Changelog has a section for the current version
         run: python scripts/release.py notes "$(python scripts/release.py current)"
         shell: bash

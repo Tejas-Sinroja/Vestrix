@@ -1,5 +1,5 @@
 """
-Local web server for codeflow.
+Local web server for vestrix.
 
   GET /                     analyze the default folder (or show the folder picker)
   GET /?path=D:\\repo       analyze any folder; re-runs on every refresh, so edits show up live
@@ -107,7 +107,7 @@ def pick_native(initial=None):
         root.attributes("-topmost", True)
         try:
             chosen = filedialog.askdirectory(parent=root, initialdir=initial or None, mustexist=True,
-                                             title="Choose a Python project folder for codeflow")
+                                             title="Choose a Python project folder for vestrix")
         finally:
             root.destroy()
     return (str(Path(chosen)) if chosen else None), None
@@ -182,7 +182,7 @@ def serve(path=None, host="127.0.0.1", port=DEFAULT_PORT, open_browser=False, ex
     if server is None:
         raise OSError(f"no free port in {port}-{port + 9}")
     url = f"http://{'127.0.0.1' if host in ('0.0.0.0', '') else host}:{server.server_address[1]}/"
-    log(f"codeflow serving {Path(path).resolve() if path else '(pick a folder in the browser)'}")
+    log(f"vestrix serving {Path(path).resolve() if path else '(pick a folder in the browser)'}")
     log(f"  open {url}   · refresh the page after editing code · Ctrl+C to stop")
     if host not in ("127.0.0.1", "localhost"):
         log("  warning: the folder browser is reachable from other machines on this network")

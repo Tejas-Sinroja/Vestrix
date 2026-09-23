@@ -3,8 +3,8 @@ requires = ["setuptools>=77"]   # PEP 639 license expressions
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "codeflow"
-dynamic = ["version"]            # single source of truth: VERSION in codeflow/analyzer.py
+name = "vestrix"
+dynamic = ["version"]            # single source of truth: VERSION in vestrix/analyzer.py
 description = "Interactive call-graph and data-flow explorer for Python codebases"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -21,17 +21,17 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/Tejas-Sinroja/CodeFlow"
-Changelog = "https://github.com/Tejas-Sinroja/CodeFlow/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/Tejas-Sinroja/Vestrix"
+Changelog = "https://github.com/Tejas-Sinroja/Vestrix/blob/main/CHANGELOG.md"
 
 [project.scripts]
-codeflow = "codeflow.cli:main"
+vestrix = "vestrix.cli:main"
 
 [tool.setuptools]
-packages = ["codeflow"]
+packages = ["vestrix"]
 
 [tool.setuptools.dynamic]
-version = { attr = "codeflow.analyzer.VERSION" }
+version = { attr = "vestrix.analyzer.VERSION" }
 
 [tool.setuptools.package-data]
-codeflow = ["viewer.html"]
+vestrix = ["viewer.html"]
