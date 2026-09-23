@@ -13,6 +13,7 @@ Interactive call graphs and data-flow tracing for Python: offline, zero dependen
   <a href="https://github.com/Tejas-Sinroja/CodeFlow/releases"><img alt="Release" src="https://img.shields.io/github/v/release/Tejas-Sinroja/CodeFlow?sort=semver"></a>
   <img alt="Python 3.9+" src="https://img.shields.io/badge/python-3.9%2B-3776ab">
   <img alt="No dependencies" src="https://img.shields.io/badge/dependencies-none-brightgreen">
+  <a href="LICENSE"><img alt="License: PolyForm Noncommercial" src="https://img.shields.io/badge/license-PolyForm%20Noncommercial-orange"></a>
 </p>
 
 ---
@@ -168,6 +169,16 @@ automatically. See [CHANGELOG.md](CHANGELOG.md) for what changed and [RELEASING.
 pip install "git+https://github.com/Tejas-Sinroja/CodeFlow@v0.3.0"   # a specific release
 codeflow ui
 ```
+
+## License
+
+Source-available under the [PolyForm Noncommercial License 1.0.0](LICENSE):
+
+- **Free** for personal, hobby, learning and research use, and for schools, charities, public research and government.
+- **Commercial use needs a paid license.** That includes using it at work on company code. See [COMMERCIAL.md](COMMERCIAL.md)
+  for what counts as commercial and how to get a license.
+
+Contributions are welcome under the terms in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Brand
 

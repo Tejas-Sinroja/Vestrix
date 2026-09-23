@@ -16,6 +16,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
   The app now uses the mark as its favicon and header logo.
 - README "Why codeflow" section: understanding AI-written ("vibe-coded") code.
 
+- License: [PolyForm Noncommercial 1.0.0](LICENSE) for noncommercial use, and paid commercial licenses
+  ([COMMERCIAL.md](COMMERCIAL.md)); contribution terms in CONTRIBUTING.md and a pull-request template.
+
 ### Changed
 - `pyproject.toml` reads the version from `codeflow/analyzer.py` (`VERSION`), so it can't drift.
 - Minimum Python is now 3.9, matching what CI tests.
