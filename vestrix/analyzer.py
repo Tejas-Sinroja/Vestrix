@@ -20,7 +20,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 __all__ = ["Project", "Func", "Call"]
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 
 SKIP_DIRS = {".git", ".hg", ".svn", "venv", ".venv", "env", ".env", "__pycache__", "node_modules",
              "build", "dist", ".tox", ".nox", ".mypy_cache", ".pytest_cache", ".ruff_cache",

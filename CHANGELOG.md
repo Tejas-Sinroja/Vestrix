@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-24
+
 ### Added
 - **Circular import detection.** `vestrix cycles <path>` reports every import cycle with the `file:line` of each import,
   and exits with code 1 on import-time cycles so it can gate CI. Cycles are classified as **import-time** (module-level
@@ -50,5 +52,6 @@ First public version, published as **codeflow**.
 
 Prototype (not published): a single script rendering a static Mermaid call graph and per-function data flow.
 
-[Unreleased]: https://github.com/Tejas-Sinroja/Vestrix/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Tejas-Sinroja/Vestrix/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/Tejas-Sinroja/Vestrix/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Tejas-Sinroja/Vestrix/releases/tag/v0.2.0
