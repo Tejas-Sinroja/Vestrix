@@ -1,9 +1,44 @@
-# codeflow
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/logo-dark.svg">
+    <img src="docs/brand/logo-light.svg" alt="codeflow" width="360">
+  </picture>
+</p>
 
-Interactive explorer that helps developers understand **how a Python codebase fits together and how data moves through it**.
-Point it at a repo and get a single offline HTML app, or a live server, with four linked views:
+<p align="center"><b>AI wrote it. See how it flows.</b><br>
+Interactive call graphs and data-flow tracing for Python: offline, zero dependencies, and nothing leaves your machine.</p>
+
+<p align="center">
+  <a href="https://github.com/Tejas-Sinroja/CodeFlow/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/Tejas-Sinroja/CodeFlow/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/Tejas-Sinroja/CodeFlow/releases"><img alt="Release" src="https://img.shields.io/github/v/release/Tejas-Sinroja/CodeFlow?sort=semver"></a>
+  <img alt="Python 3.9+" src="https://img.shields.io/badge/python-3.9%2B-3776ab">
+  <img alt="No dependencies" src="https://img.shields.io/badge/dependencies-none-brightgreen">
+</p>
+
+---
+
+## Why codeflow
+
+Code gets written faster than ever. With vibe coding, an assistant can write a whole feature in minutes. Reading it is still slow.
+When you accept code you never traced by hand, you pick up **comprehension debt**: the program works, but nobody holds
+a mental model of *what calls what* or *where a value ends up*. That debt comes due the first time you have to debug it,
+review it, secure it, or change it.
+
+codeflow pays that debt down visually. Point it at any Python folder, whether it's your own code, an AI-generated feature,
+or a repo you just cloned, and in about a second you can answer:
+
+- **"What happens when this endpoint is hit?"** Follow the call graph from any route, script or CLI command.
+- **"Where does this value go?"** Click `request.body` and watch it travel through every function it reaches.
+- **"Where did this come from?"** Trace a value backwards to its sources.
+- **"What did the AI actually pull in?"** See detected frameworks, entry points, and functions nothing calls.
+
+It reads code with Python's own `ast` module and never runs it, so it's safe to use on code you don't trust yet.
 
 ![codeflow tracing a request body from an HTTP route through validation, the service layer and pricing](docs/images/trace.png)
+
+## What you get
+
+Four linked views:
 
 | View | Answers | How to use |
 |---|---|---|
@@ -122,6 +157,23 @@ hover a node to highlight its connections · double-click to refocus. The URL ha
    module-level instances like `router = Router()`).
 4. **Stitch** data flow across functions: argument → callee parameter, callee `return` → caller, and `self.<attr>` shared by all
    methods of a class. That global graph powers **Trace**.
+
+## Versioning & releases
+
+codeflow uses [Semantic Versioning](https://semver.org/) with tags named `vX.Y.Z`. Every tag becomes a
+[GitHub Release](https://github.com/Tejas-Sinroja/CodeFlow/releases) with a wheel, an sdist and a demo page, built
+automatically. See [CHANGELOG.md](CHANGELOG.md) for what changed and [RELEASING.md](RELEASING.md) for the release cycle.
+
+```bash
+pip install "git+https://github.com/Tejas-Sinroja/CodeFlow@v0.3.0"   # a specific release
+codeflow ui
+```
+
+## Brand
+
+The logo files are in [`docs/brand`](docs/brand): `mark.svg` (app icon / favicon), `logo-light.svg` and `logo-dark.svg`
+(wordmark), and `banner.svg` / `social-preview.png` (1280×640, for the repository's social preview). The mark is a
+"C" drawn as a flow path. Blue nodes are code; the orange half is a traced value, the same highlight the app uses.
 
 ## Project layout
 

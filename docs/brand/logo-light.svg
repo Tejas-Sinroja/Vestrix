@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 96" width="400" height="96" role="img" aria-labelledby="t">
+  <title id="t">codeflow</title>
+  <!-- For light backgrounds. -->
+  <defs>
+    <linearGradient id="cf-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2563eb"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(8 8) scale(1.25)">
+    <rect width="64" height="64" rx="15" fill="url(#cf-bg)"/>
+    <path d="M42.02 19.98A17 17 0 0 0 13 32" fill="none" stroke="#dbe7ff" stroke-width="6" stroke-linecap="round"/>
+    <path d="M13 32A17 17 0 0 0 42.02 44.02" fill="none" stroke="#ff7a1a" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="42.02" cy="19.98" r="5" fill="#dbe7ff"/>
+    <circle cx="13" cy="32" r="5.5" fill="#ffffff"/>
+    <circle cx="42.02" cy="44.02" r="7.5" fill="#ff7a1a"/>
+    <circle cx="42.02" cy="44.02" r="2.8" fill="#ffffff"/>
+  </g>
+  <text x="108" y="64" font-family="Inter, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="50" font-weight="700" letter-spacing="-1.5">
+    <tspan fill="#0f172a">code</tspan><tspan fill="#2563eb">flow</tspan>
+  </text>
+</svg>
