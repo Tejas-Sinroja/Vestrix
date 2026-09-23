@@ -113,7 +113,7 @@ Paste a path, or choose a folder. A plain HTML file can analyze the folder right
 ## Quick start
 
 ```bash
-cd D:\Project\vestrix
+git clone https://github.com/Tejas-Sinroja/Vestrix && cd Vestrix
 python -m vestrix ui                                      # opens the app with a folder picker
 python -m vestrix ui D:\Project\RangeBreak                # or start with a folder
 python -m vestrix build path/to/your/repo -o flow.html --open   # one offline file to share
