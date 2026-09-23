@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/logo-dark.svg">
-    <img src="docs/brand/logo-light.svg" alt="Vestrix" width="360">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Tejas-Sinroja/Vestrix/main/docs/brand/logo-dark.svg">
+    <img src="https://raw.githubusercontent.com/Tejas-Sinroja/Vestrix/main/docs/brand/logo-light.svg" alt="Vestrix" width="360">
   </picture>
 </p>
 
@@ -13,7 +13,7 @@ Interactive call graphs and data-flow tracing for Python: offline, zero dependen
   <a href="https://github.com/Tejas-Sinroja/Vestrix/releases"><img alt="Release" src="https://img.shields.io/github/v/release/Tejas-Sinroja/Vestrix?sort=semver"></a>
   <img alt="Python 3.9+" src="https://img.shields.io/badge/python-3.9%2B-3776ab">
   <img alt="No dependencies" src="https://img.shields.io/badge/dependencies-none-brightgreen">
-  <a href="LICENSE"><img alt="License: PolyForm Noncommercial" src="https://img.shields.io/badge/license-PolyForm%20Noncommercial-orange"></a>
+  <a href="https://github.com/Tejas-Sinroja/Vestrix/blob/main/LICENSE"><img alt="License: PolyForm Noncommercial" src="https://img.shields.io/badge/license-PolyForm%20Noncommercial-orange"></a>
 </p>
 
 ---
@@ -37,7 +37,7 @@ or a repo you just cloned, and in about a second you can answer:
 
 It reads code with Python's own `ast` module and never runs it, so it's safe to use on code you don't trust yet.
 
-![Vestrix tracing a request body from an HTTP route through validation, the service layer and pricing](docs/images/trace.png)
+![Vestrix tracing a request body from an HTTP route through validation, the service layer and pricing](https://raw.githubusercontent.com/Tejas-Sinroja/Vestrix/main/docs/images/trace.png)
 
 ## What you get
 
@@ -56,29 +56,29 @@ Celery-style tasks, tests) and **insights** (most-called, most-complex, never-ca
 
 ## Screenshots
 
-All screenshots use the bundled demo app in [`examples/sample_shop`](examples/sample_shop). Open
-[`examples/sample_shop.html`](examples/sample_shop.html) to try it yourself.
+All screenshots use the bundled demo app in [`examples/sample_shop`](https://github.com/Tejas-Sinroja/Vestrix/tree/main/examples/sample_shop). Open
+[`examples/sample_shop.html`](https://github.com/Tejas-Sinroja/Vestrix/blob/main/examples/sample_shop.html) to try it yourself.
 
 ### Calls: what runs when this runs
 
 Starting from the `POST /checkout` route, you can see every function it reaches, grouped by module and labelled with
 the line each call happens on. The panel on the right shows the source with the call lines highlighted.
 
-![Call graph from the POST /checkout route](docs/images/calls.png)
+![Call graph from the POST /checkout route](https://raw.githubusercontent.com/Tejas-Sinroja/Vestrix/main/docs/images/calls.png)
 
 ### Data flow: how values move inside a function
 
 This is `CheckoutService.checkout`: parameters (blue) → variables → calls (yellow = project code) → `return` (green).
 Selecting `items` highlights every line where it's used.
 
-![Data flow inside CheckoutService.checkout](docs/images/dataflow.png)
+![Data flow inside CheckoutService.checkout](https://raw.githubusercontent.com/Tejas-Sinroja/Vestrix/main/docs/images/dataflow.png)
 
 ### Trace: follow one value across the whole program
 
 This traces the HTTP request `body` forward. It becomes `request` in `handle_checkout`, is validated and normalised,
 then turns into `items` in the service and in `price_items`. The right side lists the journey function by function.
 
-![Tracing the request body across six functions](docs/images/trace.png)
+![Tracing the request body across six functions](https://raw.githubusercontent.com/Tejas-Sinroja/Vestrix/main/docs/images/trace.png)
 
 ### Circular imports: catch the crash before it happens
 
@@ -86,7 +86,7 @@ Vestrix separates **import-time** cycles, which can fail with `ImportError: … 
 **deferred** cycles that only close through an import inside a function. Deferred cycles work, but they're fragile.
 Imports under `if TYPE_CHECKING:` are ignored. Each cycle shows the loop, the `file:line` of every import, and ways to fix it.
 
-![Circular import between models and services](docs/images/cycles.png)
+![Circular import between models and services](https://raw.githubusercontent.com/Tejas-Sinroja/Vestrix/main/docs/images/cycles.png)
 
 In CI, `vestrix cycles .` exits with code 1 when it finds an import-time cycle:
 
@@ -101,23 +101,25 @@ python -m vestrix cycles .
 
 This is the import graph between modules. Click a module to see what it imports, what imports it, and what it contains.
 
-![Module import graph](docs/images/modules.png)
+![Module import graph](https://raw.githubusercontent.com/Tejas-Sinroja/Vestrix/main/docs/images/modules.png)
 
 ### Open any folder
 
 Paste a path, or choose a folder. A plain HTML file can analyze the folder right in the browser; the local app
 (`vestrix.bat`) adds a folder browser that shows what each folder contains.
 
-![Open a project folder dialog](docs/images/open-folder.png)
+![Open a project folder dialog](https://raw.githubusercontent.com/Tejas-Sinroja/Vestrix/main/docs/images/open-folder.png)
 
 ## Quick start
 
 ```bash
-git clone https://github.com/Tejas-Sinroja/Vestrix && cd Vestrix
-python -m vestrix ui                                      # opens the app with a folder picker
-python -m vestrix ui D:\Project\RangeBreak                # or start with a folder
-python -m vestrix build path/to/your/repo -o flow.html --open   # one offline file to share
+pip install vestrix            # or: pipx install vestrix
+vestrix ui                     # opens the app with a folder picker
+vestrix ui path/to/your/repo   # or start with a folder
+vestrix build path/to/your/repo -o flow.html --open   # one offline file to share
 ```
+
+From source: `git clone https://github.com/Tejas-Sinroja/Vestrix && cd Vestrix && python -m vestrix ui`.
 
 **Easiest on Windows:** double-click `vestrix.bat` (or drag a project folder onto it). It starts the app on
 `http://127.0.0.1:8347` (and moves to the next port if that one is busy), then opens your browser.
@@ -183,7 +185,7 @@ hover a node to highlight its connections · double-click to refocus. The URL ha
 
 Vestrix uses [Semantic Versioning](https://semver.org/) with tags named `vX.Y.Z`. Every tag becomes a
 [GitHub Release](https://github.com/Tejas-Sinroja/Vestrix/releases) with a wheel, an sdist and a demo page, built
-automatically. See [CHANGELOG.md](CHANGELOG.md) for what changed and [RELEASING.md](RELEASING.md) for the release cycle.
+automatically. See [CHANGELOG.md](https://github.com/Tejas-Sinroja/Vestrix/blob/main/CHANGELOG.md) for what changed and [RELEASING.md](https://github.com/Tejas-Sinroja/Vestrix/blob/main/RELEASING.md) for the release cycle.
 
 ```bash
 pip install "git+https://github.com/Tejas-Sinroja/Vestrix@v0.3.0"   # a specific release
@@ -192,17 +194,17 @@ vestrix ui
 
 ## License
 
-Source-available under the [PolyForm Noncommercial License 1.0.0](LICENSE):
+Source-available under the [PolyForm Noncommercial License 1.0.0](https://github.com/Tejas-Sinroja/Vestrix/blob/main/LICENSE):
 
 - **Free** for personal, hobby, learning and research use, and for schools, charities, public research and government.
-- **Commercial use needs a paid license.** That includes using it at work on company code. See [COMMERCIAL.md](COMMERCIAL.md)
+- **Commercial use needs a paid license.** That includes using it at work on company code. See [COMMERCIAL.md](https://github.com/Tejas-Sinroja/Vestrix/blob/main/COMMERCIAL.md)
   for what counts as commercial and how to get a license.
 
-Contributions are welcome under the terms in [CONTRIBUTING.md](CONTRIBUTING.md).
+Contributions are welcome under the terms in [CONTRIBUTING.md](https://github.com/Tejas-Sinroja/Vestrix/blob/main/CONTRIBUTING.md).
 
 ## Brand
 
-The logo files are in [`docs/brand`](docs/brand): `mark.svg` (app icon / favicon), `logo-light.svg` and `logo-dark.svg`
+The logo files are in [`docs/brand`](https://github.com/Tejas-Sinroja/Vestrix/tree/main/docs/brand): `mark.svg` (app icon / favicon), `logo-light.svg` and `logo-dark.svg`
 (wordmark), and `banner.svg` / `social-preview.png` (1280×640, for the repository's social preview). The mark is a
 "V" drawn as a flow path. A value enters the code (the light stroke), reaches a call (the vertex), and its traced path
 comes back out (orange, the same highlight the app uses). The name comes from Latin *vestigium*, "trace, footprint",

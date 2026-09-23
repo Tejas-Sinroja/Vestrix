@@ -44,9 +44,32 @@ The tag starts `.github/workflows/release.yml`, which:
 3. builds the wheel, the sdist and a demo HTML page
 4. publishes a GitHub Release, with the matching CHANGELOG section as its notes
 
+## Publishing to PyPI
+
+Releases go to PyPI automatically through **Trusted Publishing**: GitHub Actions proves who it is to PyPI with a
+short-lived OpenID Connect token, so no API token or password is stored anywhere. The `pypi` job in `release.yml`
+runs after the build succeeds.
+
+One-time setup (already done if `pip install vestrix` works):
+
+1. Create an account on https://pypi.org and turn on two-factor authentication.
+2. Go to **Your account → Publishing → Add a new pending publisher → GitHub** and enter:
+   - PyPI project name: `vestrix`
+   - Owner: `Tejas-Sinroja`
+   - Repository name: `Vestrix` (the name *after* the GitHub rename)
+   - Workflow name: `release.yml`
+   - Environment name: `pypi`
+3. In GitHub: **Settings → Environments → New environment → `pypi`**. Optionally, add yourself as a required
+   reviewer so every PyPI upload waits for one click.
+
+After that, every `python scripts/release.py bump … --push` publishes to PyPI and creates a GitHub Release.
+PyPI versions are permanent: a version number can never be uploaded twice, even after you delete it.
+
 ## Installing a release
 
 ```bash
+pip install vestrix                      # latest from PyPI
+pip install "vestrix==0.3.1"             # a specific version
 pip install "git+https://github.com/Tejas-Sinroja/Vestrix@v0.3.0"
 # or download the .whl from the Releases page and: pip install vestrix-0.3.0-py3-none-any.whl
 ```

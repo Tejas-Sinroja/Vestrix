@@ -26,6 +26,12 @@ jobs:
           python -m vestrix --version
           python -m vestrix build examples/sample_shop -o demo.html
           python -m vestrix trace examples/sample_shop checkout_endpoint body --limit 5
+      - name: Package builds and PyPI metadata is valid
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.13'
+        run: |
+          python -m pip install --upgrade build twine
+          python -m build
+          python -m twine check --strict dist/*
       - name: Changelog has a section for the current version
         run: python scripts/release.py notes "$(python scripts/release.py current)"
         shell: bash

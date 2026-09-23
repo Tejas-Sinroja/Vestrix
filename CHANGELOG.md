@@ -6,6 +6,14 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+- Published on PyPI: `pip install vestrix`. The release workflow uploads to PyPI through Trusted Publishing (no stored
+  tokens) after building and verifying the wheel with `twine check` and a clean-venv smoke test.
+- CI builds the package and validates its PyPI metadata on every push.
+
+### Changed
+- README links and images are absolute URLs so they also render on the PyPI project page.
+
 ## [0.3.0] - 2026-09-24
 
 ### Added
